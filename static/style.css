@@ -923,23 +923,13 @@ header {
     border-radius: 8px;
     font-size: 1rem;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    box-sizing: border-box;
+    height: 40px; /* <<<< NOVA REGRA: Altura fixa para inputs */
+    box-sizing: border-box; /* Garante que padding/border contem na altura */
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.modal input[type="datetime-local"]:focus,
-.modal input[type="date"]:focus,
-.modal input[type="text"]:focus,
-.modal input[type="file"]:focus,
-.modal input[type="number"]:focus,
-.modal select:focus,
-.modal textarea:focus {
-    outline: none;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-light);
-}
-
 .modal textarea {
     min-height: 80px;
+    height: auto; /* Reseta a altura fixa para textareas */
     resize: vertical;
 }
 
@@ -964,34 +954,19 @@ header {
     gap: 15px; /* Espaço entre os grupos na mesma linha */
 }
 
-/* ================================================================
-=================== INÍCIO DA CORREÇÃO =========================
-================================================================
-*/
-
-/* Grupo de formulário genérico */
-.form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    /* A LINHA 'flex: 1 1 250px;' FOI REMOVIDA DAQUI.
-    Ela causava o esticamento vertical nos campos 
-    que eram filhos diretos do <form>.
-    */
-}
-
-/* ADICIONAMOS UMA NOVA REGRA:
-A regra de flexibilidade agora se aplica APENAS
+/* A regra de flexibilidade agora se aplica APENAS
 a .form-group que estão DENTRO de .form-row.
 */
 .form-row .form-group {
     flex: 1 1 250px; /* Flex-grow, flex-shrink, flex-basis (para largura) */
 }
 
-/* ================================================================
-===================== FIM DA CORREÇÃO ==========================
-================================================================
-*/
+/* Grupo de formulário genérico */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
 
 
 .form-group label,
@@ -1007,31 +982,59 @@ a .form-group que estão DENTRO de .form-row.
     flex-direction: column;
     gap: 5px;
 }
+
+/* ==== INÍCIO DA CORREÇÃO TAREFA 2 (Alinhamento Prazos) ==== */
+.prazo-input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Espaço entre os botões e o input */
+    height: 40px; /* Garante que o container tenha a altura dos inputs */
+}
+
 .form-group-flex .modal-quick-days {
-    margin: 0; /* Remove margem padrão */
+    margin: 0; 
+    display: flex; /* Garante que os botões fiquem em linha */
+    gap: 8px;
 }
+
 .btn-quick-day {
-    padding: 6px 10px; /* Menor para caber */
+    padding: 6px 10px; 
     font-size: 0.85rem;
-    min-width: 40px; /* Largura mínima */
+    min-width: 40px; 
+    width: 40px; /* <<<< LARGURA FIXA */
+    height: 40px; /* <<<< ALTURA FIXA (igual ao input) */
+    box-sizing: border-box;
 }
+
+/* Input de dias dentro do grupo de prazo */
+.prazo-input-group input[type="number"] {
+    width: 80px; /* <<<< LARGURA DESEJADA */
+    height: 40px; /* <<<< ALTURA FIXA (igual ao botão) */
+    padding: 10px 12px;
+}
+/* ==== FIM DA CORREÇÃO TAREFA 2 ==== */
+
 
 /* Botões de seleção (Sim/Não) */
 .item-button-group {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    height: 40px; /* <<<< ALTURA FIXA (para alinhar com os prazos) */
+    align-items: center;
 }
 .btn-item-select {
     background-color: var(--color-background);
     border: 1px solid var(--color-border);
     color: var(--color-text-secondary);
     padding: 6px 12px;
-    border-radius: 20px; /* "Pill shape" */
+    border-radius: 20px; 
     cursor: pointer;
     font-size: 0.85rem;
     font-weight: 500;
     transition: all 0.2s ease;
+    height: 100%; /* <<<< Ocupa a altura do container (40px) */
+    box-sizing: border-box;
 }
 .btn-item-select:hover {
     transform: translateY(-1px);
@@ -1175,6 +1178,39 @@ a .form-group que estão DENTRO de .form-row.
 }
 
 /* === FIM: ESTILOS PARA O NOVO MODAL DE CRIAÇÃO === */
+
+/* ==== INÍCIO DA CORREÇÃO TAREFA 3 (Botão Upload) ==== */
+.form-group-file-upload {
+    position: relative;
+    /* Esconde o input[type=file] padrão */
+}
+.form-group-file-upload input[type="file"] {
+    display: none;
+}
+.btn-file-upload {
+    /* Usa o estilo .btn-secondary */
+    background-color: var(--color-board-bg);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border);
+    width: 100%;
+    cursor: pointer;
+    font-weight: 500;
+    text-align: left; /* Alinha o texto à esquerda */
+    padding-left: 15px;
+    height: 40px; /* Mesma altura dos outros inputs */
+    line-height: 1.5; /* Alinha o texto verticalmente */
+}
+.btn-file-upload:hover {
+    background-color: #f9f9f9;
+    border-color: #d1d5db;
+}
+/* Texto quando um arquivo é selecionado */
+.btn-file-upload.file-selected {
+    color: var(--color-text-primary);
+    border-color: var(--color-success);
+    font-weight: 600;
+}
+/* ==== FIM DA CORREÇÃO TAREFA 3 ==== */
 
 
 /* --- Itens Manuais (Antigo - agora usado no modal de arquivos) --- */
