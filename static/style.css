@@ -323,7 +323,6 @@ header {
     padding: 18px 25px; /* Mais padding */
     margin: 0;
     color: var(--color-primary);
-    border-bottom: 1px solid var(--color-border);
     cursor: pointer;
     position: relative;
 }
@@ -965,13 +964,36 @@ header {
     gap: 15px; /* Espaço entre os grupos na mesma linha */
 }
 
+/* ================================================================
+=================== INÍCIO DA CORREÇÃO =========================
+================================================================
+*/
+
 /* Grupo de formulário genérico */
 .form-group {
     display: flex;
     flex-direction: column;
     gap: 5px;
-    flex: 1 1 250px; /* Flex-grow, flex-shrink, flex-basis */
+    /* A LINHA 'flex: 1 1 250px;' FOI REMOVIDA DAQUI.
+    Ela causava o esticamento vertical nos campos 
+    que eram filhos diretos do <form>.
+    */
 }
+
+/* ADICIONAMOS UMA NOVA REGRA:
+A regra de flexibilidade agora se aplica APENAS
+a .form-group que estão DENTRO de .form-row.
+*/
+.form-row .form-group {
+    flex: 1 1 250px; /* Flex-grow, flex-shrink, flex-basis (para largura) */
+}
+
+/* ================================================================
+===================== FIM DA CORREÇÃO ==========================
+================================================================
+*/
+
+
 .form-group label,
 .form-group-flex label {
     font-weight: 500;
