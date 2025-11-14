@@ -77,15 +77,50 @@ document.addEventListener('DOMContentLoaded', () => {
     let weatherForecastData = {};
     let weatherFetchController = null;
 
-    // Elementos do Modal de Criação Manual (Etapas)
-    const btnAddManualEtapa1 = document.getElementById('btn-add-manual-etapa1');
-    const manualItemEtapa1Desc = document.getElementById('manual-item-etapa1-desc');
-    const manualItemEtapa1Colab = document.getElementById('manual-item-etapa1-colab');
-    const manualItemsEtapa1List = document.getElementById('manual-items-etapa1-list');
-    const btnAddManualEtapa2 = document.getElementById('btn-add-manual-etapa2');
-    const manualItemEtapa2Desc = document.getElementById('manual-item-etapa2-desc');
-    const manualItemEtapa2Colab = document.getElementById('manual-item-etapa2-colab');
-    const manualItemsEtapa2List = document.getElementById('manual-items-etapa2-list');
+    // === INÍCIO: NOVOS ELEMENTOS DO MODAL DE CRIAÇÃO ===
+    const itemSearchInput = document.getElementById('item-search-input');
+    const itemSearchResults = document.getElementById('item-search-results');
+    const btnAddItem = document.getElementById('btn-add-item');
+    const addedItemsEtapa1List = document.getElementById('added-items-etapa1');
+    const addedItemsEtapa2List = document.getElementById('added-items-etapa2');
+    const hiddenItemsEtapa1 = document.getElementById('hidden-items-etapa1');
+    const hiddenItemsEtapa2 = document.getElementById('hidden-items-etapa2');
+
+    // A nova lista de itens mestra
+    const MASTER_ITEM_LIST = [
+        // Etapa 1
+        "Coifa", "Coifa Epoxi", "Exaustor", "Chaminé", "Chapéu Aletado", "Chapéu Canhão", "Caixa Braseiro",
+        "Porta Guilhotina Vidro L", "Porta Guilhotina Vidro U", "Porta Guilhotina Vidro F",
+        "Porta Guilhotina Inox F", "Porta Guilhotina Pedra F",
+        "Revestimento Base", "Placa cimenticia Porta", "Isolamento Coifa",
+
+        // Etapa 2
+        "Tampa Inox", "Tampa Epoxi", "Revestimento",
+        "Sistema de Elevar Manual 2 3/16", "Sistema de Elevar Manual 1/8 e 3/16",
+        "Sistema de Elevar Manual Arg. e 3/16", "Sistema de Elevar Manual Arg. e 1/8",
+        "Sistema de Elevar Motor 2 3/16", "Sistema de Elevar Motor 1/8 e 3/16",
+        "Sistema de Elevar Motor Arg e 3/16", "Sistema de Elevar Motor Arg e 1/8",
+        "Giratório 1L 4E", "Giratório 1L 5E", "Giratório 2L 5E", "Giratório 2L 6E",
+        "Giratório 2L 7E", "Giratório 2L 8E",
+        "Cooktop + Bifeteira", "Cooktop", "Bifeteira grill",
+        "Balanço 2", "Balanço 3", "Balanço 4",
+        "Kit 6 Espetos", "Regulagem Comum 2", "Regulagem Comum 3", "Regulagem Comum 4", "Regulagem Comum 5",
+        "Gavetão Inox", "Gavetão Epóxi", "Moldura Área de fogo", "Grelha de descanso", "Tampa de vidro",
+
+        // Lareiras (Etapa 2)
+        "KAM600", "KAM700", "KAM800", "KAM900", "KAM1000", "KAM1100", "KAM1200",
+        "KAM VITRO", "LYON", "ARGON", "GAB1000",
+        "Chaminé inox", "Chaminé Aço Carbono"
+    ];
+
+    // Regras de mapeamento de etapa
+    const ETAPA1_ITEMS = [
+        "Coifa", "Coifa Epoxi", "Exaustor", "Chaminé", "Chapéu Aletado", "Chapéu Canhão", "Caixa Braseiro",
+        "Porta Guilhotina Vidro L", "Porta Guilhotina Vidro U", "Porta Guilhotina Vidro F",
+        "Porta Guilhotina Inox F", "Porta Guilhotina Pedra F",
+        "Revestimento Base", "Placa cimenticia Porta", "Isolamento Coifa"
+    ];
+    // === FIM: NOVOS ELEMENTOS DO MODAL DE CRIAÇÃO ===
 
 
     /**
@@ -742,9 +777,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const localDate = new Date(date.getTime() - (offset*60*1000));
         return localDate.toISOString().slice(0, 16); // Corta segundos e 'Z'
     }
-
-    // *** REMOVIDO: calcularDataDias não é mais necessário da forma antiga ***
-    // function calcularDataDias(dias, targetInputId) { ... }
     
     function showModal(modal) {
         modalOverlay.classList.remove('hidden');
@@ -761,16 +793,19 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Limpa formulários específicos
         document.getElementById('form-criar-manual').reset();
+        // === INÍCIO: Limpeza do Novo Modal ===
+        addedItemsEtapa1List.innerHTML = '';
+        addedItemsEtapa2List.innerHTML = '';
+        hiddenItemsEtapa1.value = '[]';
+        hiddenItemsEtapa2.value = '[]';
+        itemSearchInput.value = '';
+        itemSearchResults.innerHTML = '';
+        itemSearchResults.classList.add('hidden');
+        document.getElementById('modal-criar-etapa1-finalizada').value = '';
         modalCriarOrcamento.querySelectorAll('.btn-item-select.selected').forEach(btn => {
             btn.classList.remove('selected');
         });
-        manualItemsEtapa1List.innerHTML = '';
-        manualItemsEtapa2List.innerHTML = '';
-        manualItemEtapa1Desc.value = '';
-        manualItemEtapa1Colab.value = '';
-        manualItemEtapa2Desc.value = '';
-        manualItemEtapa2Colab.value = '';
-        document.getElementById('modal-criar-etapa1-finalizada').value = '';
+        // === FIM: Limpeza do Novo Modal ===
         
         document.getElementById('form-detalhes-orcamento').reset();
         document.getElementById('form-edit-simples').reset();
@@ -781,11 +816,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('selected');
         });
         
-        // *** INÍCIO DA ALTERAÇÃO ***
         document.getElementById('modal-projeto-arquivo').value = ''; 
         document.getElementById('modal-projeto-file-list').innerHTML = ''; 
-        document.getElementById('modal-projeto-data-visita').value = ''; // Limpa a data da visita
-        // *** FIM DA ALTERAÇÃO ***
+        document.getElementById('modal-projeto-data-visita').value = ''; 
         projectFilesToUpload = []; 
 
         document.getElementById('modal-upload-arquivo-input').value = '';
@@ -808,42 +841,137 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LÓGICA DO MODAL DE CRIAÇÃO (ATUALIZADA) ---
 
-    function addManualItemToList(itemDesc, itemColab, listElement, etapa) {
-        if (!itemDesc || !itemColab) {
-            alert('Por favor, preencha o item e o colaborador.');
+    // Função de debounce para a pesquisa
+    function debounceSearch(func, delay) {
+        let timeout;
+        return function(...args) {
+            const context = this;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+        };
+    }
+
+    // Filtra e exibe os resultados da pesquisa de itens
+    function handleItemSearch() {
+        const query = itemSearchInput.value.toLowerCase().trim();
+        itemSearchResults.innerHTML = '';
+
+        if (query.length === 0) {
+            itemSearchResults.classList.add('hidden');
             return;
         }
+
+        const filteredItems = MASTER_ITEM_LIST.filter(item => 
+            item.toLowerCase().includes(query)
+        );
+
+        if (filteredItems.length > 0) {
+            filteredItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'search-result-item-modal';
+                
+                // Determina a etapa para exibir no hint
+                const isEtapa1 = ETAPA1_ITEMS.includes(item);
+                const etapaHint = isEtapa1 ? "Etapa 1" : "Etapa 2";
+
+                div.innerHTML = `<strong>${item}</strong> <span>(${etapaHint})</span>`;
+                div.dataset.item = item;
+                div.onclick = () => {
+                    itemSearchInput.value = item; // Preenche a barra
+                    itemSearchResults.classList.add('hidden'); // Esconde resultados
+                    itemSearchInput.focus();
+                };
+                itemSearchResults.appendChild(div);
+            });
+            itemSearchResults.classList.remove('hidden');
+        } else {
+            itemSearchResults.classList.add('hidden');
+        }
+    }
+    
+    // Adiciona o item (da barra de pesquisa) a uma das listas
+    function handleAddItem() {
+        const itemText = itemSearchInput.value.trim();
+        if (!itemText) return;
+
+        // Verifica se o item já foi adicionado
+        const allAddedItems = [
+            ...Array.from(addedItemsEtapa1List.querySelectorAll('li')),
+            ...Array.from(addedItemsEtapa2List.querySelectorAll('li'))
+        ];
+        const isDuplicate = allAddedItems.some(li => li.dataset.item.toLowerCase() === itemText.toLowerCase());
+
+        if (isDuplicate) {
+            alert('Este item já foi adicionado.');
+            return;
+        }
+
+        // Determina a etapa
+        let targetList;
+        // Tenta encontrar uma correspondência exata (case-insensitive) na lista mestre
+        const masterItemMatch = MASTER_ITEM_LIST.find(masterItem => masterItem.toLowerCase() === itemText.toLowerCase());
+        
+        if (masterItemMatch) {
+            // Se achou, usa a regra de etapa
+            if (ETAPA1_ITEMS.includes(masterItemMatch)) {
+                targetList = addedItemsEtapa1List;
+            } else {
+                targetList = addedItemsEtapa2List;
+            }
+        } else {
+            // Se não achou (item customizado), vai para Etapa 1 por padrão
+            targetList = addedItemsEtapa1List;
+        }
+
+        // Cria e adiciona o <li>
         const li = document.createElement('li');
-        li.dataset.item = itemDesc;
-        li.dataset.colab = itemColab;
-        li.dataset.etapa = etapa;
-        li.textContent = `${itemDesc} (Colab: ${itemColab})`;
+        li.dataset.item = itemText;
+        li.textContent = itemText;
+        
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.textContent = 'x';
-        removeBtn.className = 'btn-remove-manual-item';
-        removeBtn.onclick = () => li.remove();
-        li.appendChild(removeBtn); // CORRIGIDO: appendChild(removeBtn) em vez de li
-        listElement.appendChild(li);
+        removeBtn.className = 'btn-remove-added-item';
+        removeBtn.onclick = () => {
+            li.remove();
+            updateHiddenItemInputs();
+        };
+        
+        li.appendChild(removeBtn);
+        targetList.appendChild(li);
+
+        updateHiddenItemInputs(); // Atualiza os inputs hidden
+        
+        // Limpa a pesquisa
+        itemSearchInput.value = '';
+        itemSearchResults.innerHTML = '';
+        itemSearchResults.classList.add('hidden');
+        itemSearchInput.focus();
     }
-    btnAddManualEtapa1.addEventListener('click', () => {
-        addManualItemToList(manualItemEtapa1Desc.value, manualItemEtapa1Colab.value, manualItemsEtapa1List, 1);
-        manualItemEtapa1Desc.value = ''; manualItemEtapa1Colab.value = ''; manualItemEtapa1Desc.focus();
-    });
-    btnAddManualEtapa2.addEventListener('click', () => {
-        addManualItemToList(manualItemEtapa2Desc.value, manualItemEtapa2Colab.value, manualItemsEtapa2List, 2);
-        manualItemEtapa2Desc.value = ''; manualItemEtapa2Colab.value = ''; manualItemEtapa2Desc.focus();
-    });
+    
+    // Atualiza os inputs hidden com os JSONs das listas de itens
+    function updateHiddenItemInputs() {
+        const items1 = Array.from(addedItemsEtapa1List.querySelectorAll('li')).map(li => li.dataset.item);
+        const items2 = Array.from(addedItemsEtapa2List.querySelectorAll('li')).map(li => li.dataset.item);
+        
+        hiddenItemsEtapa1.value = JSON.stringify(items1);
+        hiddenItemsEtapa2.value = JSON.stringify(items2);
+    }
+
 
     function openCriarModal() {
         return new Promise((resolve, reject) => {
             showModal(modalCriarOrcamento);
+            
+            // Limpa o estado anterior
+            hideModals(); // Usa a função de limpeza
+            showModal(modalCriarOrcamento); // Reabre o modal limpo
+
             document.getElementById('modal-criar-cancel').onclick = () => {
                 hideModals(); reject(new Error('Cancelado pelo usuário'));
             };
-            modalCriarOrcamento.querySelectorAll('.item-button-group .btn-item-select').forEach(btn => {
-                btn.onclick = () => btn.classList.toggle('selected');
-            });
+
+            // Lógica do botão Sim/Não
             const etapaHiddenInput = document.getElementById('modal-criar-etapa1-finalizada');
             const etapaBtnGroup = document.getElementById('etapa1-finalizada-group');
             etapaBtnGroup.querySelectorAll('.btn-item-select').forEach(btn => {
@@ -854,46 +982,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             });
             
-            // *** INÍCIO DA ALTERAÇÃO (LÓGICA DOS BOTÕES DE DIAS) ***
-            modalCriarOrcamento.querySelectorAll('.modal-quick-days button[data-dias]').forEach(btn => {
+            // Lógica dos botões de dias
+            modalCriarOrcamento.querySelectorAll('.btn-quick-day').forEach(btn => {
                 btn.onclick = () => {
                     const dias = btn.dataset.dias;
-                    const targetInputId = btn.dataset.diasTarget; // Ex: 'modal-criar-prazo-dias1'
+                    const targetInputId = btn.dataset.diasTarget; 
                     const targetInput = document.getElementById(targetInputId);
                     if (targetInput) {
-                        targetInput.value = dias; // Seta o valor no input de NÚMERO
+                        targetInput.value = dias;
                     }
                 };
             });
-            // Remove a lógica antiga que calculava a data
-            modalCriarOrcamento.querySelectorAll('.modal-quick-days input[type="number"]').forEach(input => {
-                input.oninput = null; // Remove listener antigo
-            });
-            // *** FIM DA ALTERAÇÃO ***
 
-            modalCriarOrcamento.querySelectorAll('.btn-item-complemento').forEach(compBtn => {
-                compBtn.onclick = () => {
-                    const complemento = compBtn.dataset.complemento;
-                    const grupo = compBtn.closest('.item-button-group');
-                    const baseItens = grupo.querySelectorAll('.btn-item-select.selected, .btn-lareira-base.selected, .btn-lareira-chamine.selected');
-                    if (baseItens.length === 0) return;
-                    const lastBaseItemBtn = baseItens[baseItens.length - 1];
-                    const baseItemText = lastBaseItemBtn.dataset.item;
-                    lastBaseItemBtn.classList.remove('selected');
-                    const newItemText = baseItemText + complemento;
-                    let existingBtn = Array.from(grupo.querySelectorAll('.btn-item-select')).find(b => b.dataset.item === newItemText);
-                    if (!existingBtn) {
-                        existingBtn = document.createElement('button');
-                        existingBtn.type = 'button';
-                        existingBtn.className = 'btn-item-select';
-                        existingBtn.dataset.item = newItemText;
-                        existingBtn.textContent = newItemText;
-                        existingBtn.onclick = () => existingBtn.classList.toggle('selected');
-                        grupo.appendChild(existingBtn);
+            // Lógica da pesquisa de itens
+            itemSearchInput.addEventListener('input', debounceSearch(handleItemSearch, 200));
+            btnAddItem.addEventListener('click', handleAddItem);
+            
+            // Permite adicionar com "Enter" na barra de pesquisa
+            itemSearchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Impede o submit do formulário
+                    // Se um item estiver destacado nos resultados, usa ele
+                    const firstResult = itemSearchResults.querySelector('.search-result-item-modal');
+                    if (firstResult && !itemSearchResults.classList.contains('hidden')) {
+                        itemSearchInput.value = firstResult.dataset.item;
+                        itemSearchResults.classList.add('hidden');
                     }
-                    existingBtn.classList.add('selected');
-                };
+                    handleAddItem(); // Adiciona o que estiver na barra
+                }
             });
+            
+            // Fecha resultados da busca se clicar fora
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.item-search-container')) {
+                    itemSearchResults.classList.add('hidden');
+                }
+            });
+            
+            // Não faz nada com os complementos (removidos)
         });
     }
 
@@ -902,52 +1028,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = e.target;
         const formData = new FormData(form);
 
-        // *** INÍCIO DA ALTERAÇÃO (VALIDAÇÃO DE ARQUIVO) ***
         const arquivo = formData.get('arquivo');
         if (!arquivo || arquivo.size === 0) {
             alert('O anexo de arquivo é obrigatório.');
             return;
         }
-        // *** FIM DA ALTERAÇÃO ***
 
         const etapaFinalizada = formData.get('etapa1_finalizada');
         if (!formData.get('numero_orcamento') || !formData.get('nome_cliente')) {
             alert('Número do Orçamento e Nome do Cliente são obrigatórios.'); return;
         }
         
-        // *** INÍCIO DA ALTERAÇÃO (VALIDAÇÃO DE PRAZO) ***
         if (!formData.get('prazo_dias_etapa1') || !formData.get('prazo_dias_etapa2')) {
             alert('Os Prazos (em dias) da Etapa 1 e Etapa 2 são obrigatórios.'); return;
         }
-        // *** FIM DA ALTERAÇÃO ***
 
         if (!etapaFinalizada) {
             alert('Por favor, selecione se a Etapa 1 já foi finalizada (Sim ou Não).'); return;
         }
         
-        const selectedItemsEtapa1 = [];
-        modalCriarOrcamento.querySelectorAll('.item-button-group[data-etapa="1"] .btn-item-select.selected').forEach(btn => {
-            selectedItemsEtapa1.push(btn.dataset.item);
-        });
-        formData.append('items_etapa1_json', JSON.stringify(selectedItemsEtapa1));
+        // Os inputs hidden (hiddenItemsEtapa1 e hiddenItemsEtapa2) já são
+        // atualizados em tempo real pela função updateHiddenItemInputs(),
+        // então não precisamos mais coletar os itens manualmente aqui.
+        // Apenas renomeamos os inputs hidden no HTML para 'items_etapa1_json' e 'items_etapa2_json'
         
-        const selectedItemsEtapa2 = [];
-        modalCriarOrcamento.querySelectorAll('.item-button-group[data-etapa="2"] .btn-item-select.selected').forEach(btn => {
-            selectedItemsEtapa2.push(btn.dataset.item);
-        });
-        formData.append('items_etapa2_json', JSON.stringify(selectedItemsEtapa2));
-        
-        const manualItemsEtapa1 = [];
-        manualItemsEtapa1List.querySelectorAll('li').forEach(li => {
-            manualItemsEtapa1.push({ item: li.dataset.item, colab: li.dataset.colab });
-        });
-        formData.append('manual_items_etapa1_json', JSON.stringify(manualItemsEtapa1));
-        
-        const manualItemsEtapa2 = [];
-        manualItemsEtapa2List.querySelectorAll('li').forEach(li => {
-            manualItemsEtapa2.push({ item: li.dataset.item, colab: li.dataset.colab });
-        });
-        formData.append('manual_items_etapa2_json', JSON.stringify(manualItemsEtapa2));
+        // (O FormData já pega os valores de hidden-items-etapa1 e hidden-items-etapa2)
+        // Renomeei os inputs no HTML, então o backend receberá:
+        // name="items_etapa1_json" e name="items_etapa2_json"
 
         try {
             const response = await fetch('/api/orcamento/create_manual', { method: 'POST', body: formData });
@@ -1337,9 +1444,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const fileInput = document.getElementById('modal-projeto-arquivo');
             const fileList = document.getElementById('modal-projeto-file-list');
             
-            // *** INÍCIO DA CORREÇÃO ***
             const dataVisitaInput = document.getElementById('modal-projeto-data-visita');
-            // *** FIM DA CORREÇÃO ***
 
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
@@ -1380,23 +1485,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // --- Salvar (CORRIGIDO) ---
             document.getElementById('modal-projeto-save').onclick = () => {
-                // *** INÍCIO DA CORREÇÃO (REQ 1: Validação) ***
                 const dataVisita = dataVisitaInput.value;
                 if (!dataVisita) {
                     return alert('A "Data da Visita (Obrigatório)" deve ser preenchida.');
                 }
-                // *** FIM DA CORREÇÃO ***
 
                 if (projectFilesToUpload.length === 0) {
                     return alert('É obrigatório anexar pelo menos um arquivo de projeto.');
                 }
                 
-                // *** INÍCIO DA CORREÇÃO (REQ 3: Passar a data) ***
                 const data = { 
                     files: projectFilesToUpload,
                     data_visita: dataVisita 
                 };
-                // *** FIM DA CORREÇÃO ***
                 
                 hideModals();
                 resolve(data);
@@ -1455,24 +1556,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (currentGroupName === 'Entrada de Orçamento') {
                 if (novoStatus === 'Mandar para Produção') {
-                    // *** INÍCIO DA CORREÇÃO ***
-                    // Esta lógica foi movida para o 'updateStatus' no backend,
-                    // mas precisamos da data do modal 'modal-anexar-projeto' se ele for aberto.
-                    // No entanto, para 'Entrada' -> 'Mandar', o modal correto é o 'modal-projeto-data-visita'
-                    // que não é o 'modal-anexar-projeto'.
-                    // Vamos assumir que 'Mandar para Produção' de 'Entrada' agora também
-                    // precisa da data. (Vamos simplificar e usar o 'modal-anexar-projeto'
-                    // que agora só pede a data, ou melhor, um modal que só pede a data)
-                    
-                    // REVISÃO: A lógica no 'updateStatus' do 'app.py' lida com 'Mandar para Produção'
-                    // vindo de 'Entrada de Orçamento'. Ela ativa o 'moveu_para_producao = True'.
-                    // Precisamos fornecer a 'data_visita' aqui.
-                    const dados_data = await openAnexarProjetoModal(); // Reutilizando o modal
+                    const dados_data = await openAnexarProjetoModal(); 
                     dados_adicionais.data_visita = dados_data.data_visita;
-                    // Também precisamos anexar os arquivos
                     await handleUploadArquivos(orcamentoId, dados_data.files);
-                    // *** FIM DA CORREÇÃO ***
-
                 } else if (novoStatus === 'Standby') {
                     dados_adicionais = await openStandbyModal();
                 }
@@ -1481,10 +1567,7 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (currentGroupName === 'Projetar' && novoStatus === 'Aprovado para Produção') {
                 const dados_com_arquivos = await openAnexarProjetoModal();
                 await handleUploadArquivos(orcamentoId, dados_com_arquivos.files);
-                
-                // *** INÍCIO DA CORREÇÃO (REQ 3: Passar a data) ***
                 dados_adicionais.data_visita = dados_com_arquivos.data_visita;
-                // *** FIM DA CORREÇÃO ***
             }
 
             else if (novoStatus === 'Agendar Visita') {
@@ -1524,12 +1607,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     dados_adicionais.responsavel_visita = null;
                 }
                 
-                // *** INÍCIO DA CORREÇÃO ***
-                // Também precisa da data de entrada na produção
                 const dados_data = await openAnexarProjetoModal(); 
                 dados_adicionais.data_visita = dados_data.data_visita;
                 await handleUploadArquivos(orcamentoId, dados_data.files);
-                // *** FIM DA CORREÇÃO ***
 
             } else if (novoStatus === 'Standby') {
                  if (currentGroupName !== 'Entrada de Orçamento') {
@@ -1755,11 +1835,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             (grupoAntigoNome === 'Visitas e Medidas' && grupoNovoNome === 'Linha de Produção') ||
                             (grupoAntigoNome === 'Entrada de Orçamento' && grupoNovoNome === 'Linha de Produção')) {
                             try {
-                                // *** INÍCIO DA CORREÇÃO ***
                                 const dados_modal = await openAnexarProjetoModal();
                                 await handleUploadArquivos(orcamentoId, dados_modal.files);
                                 dados_adicionais.data_visita = dados_modal.data_visita;
-                                // *** FIM DA CORREÇÃO ***
                             } catch (e) {
                                 console.log('Movimentação cancelada.');
                                 loadWorkflow(); 
@@ -2079,7 +2157,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Listeners dos formulários dos modais
     document.getElementById('form-criar-manual').addEventListener('submit', handleCriarManualSubmit);
     document.getElementById('form-detalhes-orcamento').addEventListener('submit', handleDetalhesSubmit);
-    // CORREÇÃO BUG 2: Adiciona listener de cancelamento
     document.getElementById('modal-detalhes-cancel').addEventListener('click', hideModals);
 
     
@@ -2284,6 +2361,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fecha busca
         if (!e.target.closest('.header-search-container')) {
             globalSearchResults.classList.add('hidden');
+        }
+        // === ATUALIZADO: Fecha busca de itens do modal ===
+        if (!e.target.closest('.item-search-container')) {
+            if(itemSearchResults) itemSearchResults.classList.add('hidden');
         }
     });
 

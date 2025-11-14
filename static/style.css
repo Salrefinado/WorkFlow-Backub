@@ -945,37 +945,62 @@ header {
 }
 
 /* --- [REVISÃO PROFISSIONAL] Modal de Criação (Botões) --- */
+
+/* === INÍCIO: ESTILOS PARA O NOVO MODAL DE CRIAÇÃO === */
+
+#modal-criar-orcamento {
+    max-width: 800px; /* Mais largo para comportar as colunas */
+}
+
 #modal-criar-orcamento form {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 10px; /* Espaço entre os elementos do formulário */
 }
-.item-group-container {
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 10px;
+
+/* Layout de linha flexível */
+.form-row {
+    display: flex;
+    flex-wrap: wrap; /* Permite quebrar a linha em telas pequenas */
+    gap: 15px; /* Espaço entre os grupos na mesma linha */
 }
-.item-group-container h4 {
-    font-size: 1.1rem;
-    color: var(--color-primary);
-    margin: 5px 0 10px 0;
+
+/* Grupo de formulário genérico */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1 1 250px; /* Flex-grow, flex-shrink, flex-basis */
 }
-.item-group-container h5 {
-    margin: 0 0 8px 0;
-    font-size: 0.95rem;
-    color: var(--color-text-primary);
-    border-bottom: 1px solid var(--color-border);
-    padding-bottom: 5px;
+.form-group label,
+.form-group-flex label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 2px;
 }
+
+/* Grupo de formulário para a linha de prazos */
+.form-group-flex {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.form-group-flex .modal-quick-days {
+    margin: 0; /* Remove margem padrão */
+}
+.btn-quick-day {
+    padding: 6px 10px; /* Menor para caber */
+    font-size: 0.85rem;
+    min-width: 40px; /* Largura mínima */
+}
+
+/* Botões de seleção (Sim/Não) */
 .item-button-group {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-bottom: 10px;
 }
-/* [BOTÕES LEGAIS] */
-.btn-item-select,
-.btn-item-complemento {
+.btn-item-select {
     background-color: var(--color-background);
     border: 1px solid var(--color-border);
     color: var(--color-text-secondary);
@@ -986,8 +1011,7 @@ header {
     font-weight: 500;
     transition: all 0.2s ease;
 }
-.btn-item-select:hover,
-.btn-item-complemento:hover {
+.btn-item-select:hover {
     transform: translateY(-1px);
     border-color: #d1d5db;
 }
@@ -997,37 +1021,141 @@ header {
     border-color: var(--color-primary);
     font-weight: 600;
 }
-.btn-item-complemento {
-    background-color: #f0f9ff;
-    border-color: #bae6fd;
-    color: #075985;
-}
-.btn-item-complemento:hover {
-    background-color: #e0f2fe;
+/* --- FIM: Botões de seleção (Sim/Não) --- */
+
+
+/* --- Container da Barra de Pesquisa de Itens --- */
+.item-search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    position: relative; /* Para o dropdown de resultados */
 }
 
-/* --- Itens Manuais --- */
-.manual-item-container {
-    margin-top: 10px;
-}
-.manual-item-container h4 {
-    font-size: 1.1rem;
-    color: var(--color-primary);
-    margin: 5px 0 10px 0;
-}
-.manual-item-input-group {
-    display: grid;
-    grid-template-columns: 2fr 1fr auto;
-    gap: 10px;
-    align-items: center;
-}
-.manual-item-input-group input {
-    font-size: 0.95rem;
-}
-.manual-item-input-group button {
-    padding: 11px 12px; /* Alinha altura com inputs */
+.form-group-search label {
+    font-weight: 500;
     font-size: 0.9rem;
+    margin-bottom: 2px;
 }
+
+.search-wrapper {
+    display: flex;
+    gap: 10px;
+}
+.search-wrapper input {
+    flex-grow: 1; /* Ocupa o espaço disponível */
+}
+.search-wrapper button {
+    flex-shrink: 0; /* Não encolhe */
+}
+
+/* Dropdown de resultados da busca de itens */
+.item-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: calc(100% - 110px); /* Largura do input (100% - largura do botão - gap) */
+    background-color: var(--color-board-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: var(--color-shadow-medium);
+    z-index: 1050; /* Acima do modal */
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 4px;
+}
+.item-search-results.hidden {
+    display: none;
+}
+.search-result-item-modal {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border-radius: 6px;
+}
+.search-result-item-modal:hover {
+    background-color: var(--color-background);
+}
+.search-result-item-modal strong {
+    color: var(--color-text-primary);
+}
+.search-result-item-modal span {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+    margin-left: 8px;
+}
+
+
+/* --- Container das colunas de itens adicionados --- */
+.added-items-container {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+    min-height: 150px; /* Altura mínima para as colunas */
+}
+
+.added-items-column {
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 10px;
+    background-color: var(--color-background);
+}
+.added-items-column h5 {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+    color: var(--color-text-primary);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 5px;
+}
+
+.added-item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    height: 150px; /* Altura fixa para scroll */
+    overflow-y: auto;
+}
+
+.added-item-list li {
+    background-color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+    word-break: break-word; /* Garante quebra de linha */
+}
+
+.btn-remove-added-item {
+    background-color: var(--color-danger-light);
+    color: var(--color-danger);
+    border: 1px solid transparent;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 18px;
+    text-align: center;
+    padding: 0;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+.btn-remove-added-item:hover {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+/* === FIM: ESTILOS PARA O NOVO MODAL DE CRIAÇÃO === */
+
+
+/* --- Itens Manuais (Antigo - agora usado no modal de arquivos) --- */
 .manual-item-list {
     list-style: none;
     padding: 0;

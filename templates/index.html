@@ -125,153 +125,97 @@
     <div id="modal-criar-orcamento" class="modal hidden">
         <h4>Criar Novo Orçamento</h4>
         <form id="form-criar-manual">
-            <label for="modal-criar-numero">Número do Orçamento:</label>
-            <input type="text" id="modal-criar-numero" name="numero_orcamento" required>
             
-            <label for="modal-criar-cliente">Nome do Cliente:</label>
-            <input type="text" id="modal-criar-cliente" name="nome_cliente" required>
+            <div class="form-row">
+                <div class="form-group" style="flex: 1 1 100px;">
+                    <label for="modal-criar-numero">Nº Orçamento</label>
+                    <input type="text" id="modal-criar-numero" name="numero_orcamento" required maxlength="10">
+                </div>
+                <div class="form-group" style="flex: 1 1 300px;">
+                    <label for="modal-criar-cliente">Nome do Cliente</label>
+                    <input type="text" id="modal-criar-cliente" name="nome_cliente" required>
+                </div>
+            </div>
 
-            <label for="modal-criar-numero-cliente">Número do Cliente (Opcional):</label>
-            <input type="text" id="modal-criar-numero-cliente" name="numero_cliente" placeholder="(XX) XXXXX-XXXX">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="modal-criar-numero-cliente">Número Cliente</label>
+                    <input type="text" id="modal-criar-numero-cliente" name="numero_cliente" placeholder="(00)00000-0000">
+                </div>
+                <div class="form-group">
+                    <label for="modal-criar-outro-numero">Outro Número (Opcional)</label>
+                    <input type="text" id="modal-criar-outro-numero" name="outro_numero" placeholder="(00)00000-0000">
+                </div>
+            </div>
             
-            <label for="modal-criar-arquivo">Anexar Arquivo (Obrigatório):</label>
-            <input type="file" id="modal-criar-arquivo" name="arquivo" required>
-            <label for="modal-criar-endereco">Endereço (Para previsão do tempo):</label>
-            <input type="text" id="modal-criar-endereco" name="endereco" placeholder="Ex: Rua, Número, Bairro, Curitiba">
+            <div class="form-group">
+                <label for="modal-criar-endereco">Endereço (Para previsão do tempo)</label>
+                <input type="text" id="modal-criar-endereco" name="endereco" placeholder="Ex: Rua, Número, Bairro, Curitiba">
+            </div>
+
+            <div class="form-group">
+                <label for="modal-criar-arquivo">Anexar Arquivo (Obrigatório)</label>
+                <input type="file" id="modal-criar-arquivo" name="arquivo" required>
+            </div>
             
             <hr>
 
-            <label>Prazo Etapa 1 (Dias Corridos - Obrigatório):</label>
-            <div class="modal-quick-days">
-                <button type="button" class="btn btn-secondary" data-dias="30" data-dias-target="modal-criar-prazo-dias1">30 dias</button>
-                <button type="button" class="btn btn-secondary" data-dias="45" data-dias-target="modal-criar-prazo-dias1">45 dias</button>
-            </div>
-            <input type="number" id="modal-criar-prazo-dias1" name="prazo_dias_etapa1" placeholder="Dias" min="1" style="width: 70px;" required>
-            
-            <label>Prazo Etapa 2 (Dias Corridos - Obrigatório):</label>
-            <div class="modal-quick-days">
-                <button type="button" class="btn btn-secondary" data-dias="30" data-dias-target="modal-criar-prazo-dias2">30 dias</button>
-                <button type="button" class="btn btn-secondary" data-dias="45" data-dias-target="modal-criar-prazo-dias2">45 dias</button>
-            </div>
-            <input type="number" id="modal-criar-prazo-dias2" name="prazo_dias_etapa2" placeholder="Dias" min="1" style="width: 70px;" required>
-            <label>Etapa 1 já foi finalizada? (Obrigatório)</label>
-            <div class="item-button-group" id="etapa1-finalizada-group">
-                <button type="button" class="btn-item-select" data-value="Nao">Não</button>
-                <button type="button" class="btn-item-select" data-value="Sim">Sim</button>
-            </div>
-            <input type="hidden" id="modal-criar-etapa1-finalizada" name="etapa1_finalizada" value="">
-
-            <hr>
-            
-            <div class="item-group-container">
-                
-                <h4>Primeira Etapa</h4>
-                <h5>Hélio</h5>
-                <div class="item-button-group" data-etapa="1">
-                    <button type="button" class="btn-item-select" data-item="Coifa">Coifa</button>
-                    <button type="button" class="btn-item-select" data-item="Exaustor">Exaustor</button>
-                    <button type="button" class="btn-item-select" data-item="Chaminé">Chaminé</button>
-                    <button type="button" class="btn-item-select" data-item="Chapéu Aletado">Chapéu Aletado</button>
-                    <button type="button" class="btn-item-select" data-item="Chapéu Canhão">Chapéu Canhão</button>
+            <div class="form-row" style="align-items: flex-end;">
+                <div class="form-group-flex">
+                    <label>Prazo Etapa 1 (Dias)</label>
+                    <div class="modal-quick-days">
+                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="30" data-dias-target="modal-criar-prazo-dias1">30</button>
+                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="45" data-dias-target="modal-criar-prazo-dias1">45</button>
+                    </div>
+                    <input type="number" id="modal-criar-prazo-dias1" name="prazo_dias_etapa1" placeholder="Dias" min="1" required style="width: 80px;">
                 </div>
-                <h5>Edison</h5>
-                <div class="item-button-group" data-etapa="1">
-                    <button type="button" class="btn-item-select" data-item="Porta de Guilhotina fechamento em vidro">Porta Guilhotina (Vidro)</button>
-                    <button type="button" class="btn-item-select" data-item="Porta de Guilhotina fechamento em pedra">Porta Guilhotina (Pedra)</button>
-                    <button type="button" class="btn-item-select" data-item="Porta de Guilhotina fechamento em INOX 304">Porta Guilhotina (INOX)</button>
+                <div class="form-group-flex">
+                    <label>Prazo Etapa 2 (Dias)</label>
+                    <div class="modal-quick-days">
+                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="30" data-dias-target="modal-criar-prazo-dias2">30</button>
+                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="45" data-dias-target="modal-criar-prazo-dias2">45</button>
+                    </div>
+                    <input type="number" id="modal-criar-prazo-dias2" name="prazo_dias_etapa2" placeholder="Dias" min="1" required style="width: 80px;">
                 </div>
-                <h5>Renato</h5>
-                <div class="item-button-group" data-etapa="1">
-                    <button type="button" class="btn-item-select" data-item="Revestimento Placa Cimenticia na Base">Revestimento Placa Cimenticia</button>
-                    <button type="button" class="btn-item-select" data-item="Isolamento térmico de coifa">Isolamento térmico de coifa</button>
-                </div>
-                
-                <hr>
-
-                <h4>Segunda Etapa</h4>
-                <h5>Edison</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select" data-item="Tampa de vidro">Tampa de vidro</button>
-                </div>
-                <h5>Luiz</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select" data-item="Regulagem de balanço">Regulagem de balanço</button>
-                    <button type="button" class="btn-item-select" data-item="Sistema Giratório">Sistema Giratório</button>
-                    <button type="button" class="btn-item-select" data-item="Moldura Área de fogo">Moldura Área de fogo</button>
-                    <button type="button" class="btn-item-select" data-item="Bancada interna">Bancada interna</button>
-                    <button type="button" class="btn-item-select" data-item="Bifeteira grill">Bifeteira grill</button>
-                </div>
-                <h5>Hélio</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select" data-item="Revestimento">Revestimento</button>
-                    <button type="button" class="btn-item-select" data-item="Gavetão">Gavetão</button>
-                </div>
-                <h5>José</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select" data-item="Grelhas">Grelhas</button>
-                    <button type="button" class="btn-item-select" data-item="Espetos">Espetos</button>
-                    <button type="button" class="btn-item-select" data-item="Sistema de elevar Manual">Sistema de elevar Manual</button>
-                </div>
-                <h5>Anderson</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select" data-item="Tampa INOX">Tampa INOX</button>
-                    <button type="button" class="btn-item-select" data-item="Tampa Preto Epoxi">Tampa Preto Epoxi</button>
-                </div>
-
-                <hr>
-                
-                <h4>Lareiras (Etapa 2)</h4>
-                <h5>Edison</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM600">KAM600</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM700">KAM700</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM800">KAM800</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM900">KAM900</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM1000">KAM1000</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM1100">KAM1100</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM1200">KAM1200</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="KAM VITRO">KAM VITRO</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="LYON">LYON</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="ARGON">ARGON</button>
-                    <button type="button" class="btn-item-select btn-lareira-base" data-item="GAB1000">GAB1000</button>
-                    <button type="button" class="btn-item-complemento" data-complemento=" DUPLA FACE">DUPLA FACE</button>
-                    <button type="button" class="btn-item-complemento" data-complemento=" 1 LATERAL EM VIDRO">1 LATERAL VIDRO</button>
-                    <button type="button" class="btn-item-complemento" data-complemento=" 2 LATERAIS EM VIDRO">2 LATERAIS VIDRO</button>
-                </div>
-                <h5>Anderson</h5>
-                <div class="item-button-group" data-etapa="2">
-                    <button type="button" class="btn-item-select btn-lareira-chamine" data-item="Chaminé inox">Chaminé inox</button>
-                    <button type="button" class="btn-item-select btn-lareira-chamine" data-item="Chaminé Aço Carbono">Chaminé Aço Carbono</button>
-                    <button type="button" class="btn-item-select" data-item="Chapéu aletado">Chapéu aletado</button>
-                    <button type="button" class="btn-item-select" data-item="Chapéu Canhão">Chapéu Canhão</button>
-                    <button type="button" class="btn-item-complemento" data-complemento=" GRAFITE">GRAFITE</button>
+                <div class="form-group-flex" style="margin-left: 10px;">
+                    <label>Etapa 1 Finalizada?</label>
+                    <div class="item-button-group" id="etapa1-finalizada-group">
+                        <button type="button" class="btn-item-select" data-value="Nao">Não</button>
+                        <button type="button" class="btn-item-select" data-value="Sim">Sim</button>
+                    </div>
+                    <input type="hidden" id="modal-criar-etapa1-finalizada" name="etapa1_finalizada" value="">
                 </div>
             </div>
 
             <hr>
 
-            <div class="manual-item-container">
-                <h4>Itens Manuais (Etapa 1)</h4>
-                <div class="manual-item-input-group">
-                    <input type="text" id="manual-item-etapa1-desc" placeholder="Descrição do Item">
-                    <input type="text" id="manual-item-etapa1-colab" placeholder="Colaborador">
-                    <button type="button" id="btn-add-manual-etapa1" class="btn btn-secondary">Adicionar</button>
+            <h4>Adicionar Itens ao Orçamento</h4>
+            <div class="item-search-container">
+                <div class="form-group-search">
+                    <label for="item-search-input">Pesquisar Item</label>
+                    <div class="search-wrapper">
+                        <input type="text" id="item-search-input" placeholder="Digite para buscar (Ex: Coifa, KAM800, Giratório 1L 4E)..." autocomplete="off">
+                        <button type="button" id="btn-add-item" class="btn btn-primary">Adicionar</button>
+                    </div>
+                    <div id="item-search-results" class="item-search-results hidden"></div>
                 </div>
-                <ul id="manual-items-etapa1-list" class="manual-item-list">
-                    </ul>
             </div>
 
-            <div class="manual-item-container">
-                <h4>Itens Manuais (Etapa 2)</h4>
-                <div class="manual-item-input-group">
-                    <input type="text" id="manual-item-etapa2-desc" placeholder="Descrição do Item">
-                    <input type="text" id="manual-item-etapa2-colab" placeholder="Colaborador">
-                    <button type="button" id="btn-add-manual-etapa2" class="btn btn-secondary">Adicionar</button>
+            <div class="added-items-container">
+                <div class="added-items-column">
+                    <h5>Etapa 1</h5>
+                    <ul id="added-items-etapa1" class="added-item-list" data-etapa="1">
+                        </ul>
                 </div>
-                <ul id="manual-items-etapa2-list" class="manual-item-list">
-                    </ul>
+                <div class="added-items-column">
+                    <h5>Etapa 2</h5>
+                    <ul id="added-items-etapa2" class="added-item-list" data-etapa="2">
+                        </ul>
+                </div>
             </div>
-
+            
+            <input type="hidden" id="hidden-items-etapa1" name="items_etapa1_json">
+            <input type="hidden" id="hidden-items-etapa2" name="items_etapa2_json">
 
             <div class="modal-actions">
                 <button id="modal-criar-cancel" type="button" class="btn btn-secondary">Cancelar</button>
@@ -279,7 +223,6 @@
             </div>
         </form>
     </div>
-    
     <div id="modal-visita" class="modal hidden">
         <h4>Agendar Visita</h4>
         <label for="modal-visita-data">Data da Visita:</label>

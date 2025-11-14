@@ -4,6 +4,7 @@ import json
 import requests
 import threading
 import uuid # NOVO
+import re # NOVO (Para o Giratório)
 from urllib.parse import quote_plus
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, flash, abort
 from flask_sqlalchemy import SQLAlchemy
@@ -91,48 +92,95 @@ def send_whatsapp_notification(message, phone_numbers):
     except Exception as e:
         print(f"Erro ao preparar notificação: {e}")
 
-# Mapeamentos de Itens (ANTIGO - Usado apenas pelo ZIP UPLOAD)
-ITEM_DEFINITIONS_PRODUCAO = { "Tampa Inox": "Anderson", "Tampa Epoxi": "Anderson", "Revestimento Fundo": "Hélio", "Revestimento Em L": "Hélio", "Revestimento Em U": "Hélio", "Sistema de Elevar Manual 2 3/16": "Luiz e José", "Sistema de Elevar Manual 1/8 e 3/16": "Luiz e José", "Sistema de Elevar Manual Arg e 3/16": "Luiz e José", "Sistema de Elevar Manual Arg e 1/8": "Luiz e José", "Sistema de Elevar Motor 2 3/16": "Luiz e José", "Sistema de Elevar Motor 1/8 e 3/16": "Luiz e José", "Sistema de Elevar Motor Arg e 3/16": "Luiz e José", "Sistema de Elevar Motor Arg e 1/8": "Luiz e José", "Giratório 1L 4E": "Luiz", "Giratório 1L 5E": "Luiz", "Giratório 2L 5E": "Luiz", "Giratório 2L 6E": "Luiz", "Giratório 2L 7E": "Luiz", "Giratório 2L 8E": "Luiz", "Cooktop + Bifeira": "Luiz", "Cooktop": "Indefinido", "Porta Guilhotina Vidro L": "Edison", "Porta Guilhotina Vidro U": "Edison", "Porta Guilhotina Vidro F": "Edison", "Porta Guilhotina Inox F": "Edison", "Porta Guilhotina Pedra F": "Edison", "Coifa Epoxi": "Hélio", "Isolamento Coifa": "Indefinido", "Placa cimenticia Porta": "Edison", "Revestimento Base": "Indefinido", "Bifeteira grill": "Luiz", "Balanço 2": "Luiz", "Balanço 3": "Luiz", "Balanço 4": "Luiz", "Kit 6 Espetos": "José", "Regulagem Comum 2": "José", "Regulagem Comum 3": "José", "Regulagem Comum 4": "José", "Regulagem Comum 5": "José", "Gavetão Inox": "Hélio", "Moldura Área de fogo": "Luiz", "Grelha de descanso": "José", "KAM800 2 Faces": "Edison" }
+# --- INÍCIO: NOVOS MAPEAMENTOS (Criação Manual) ---
 
-# --- NOVOS MAPEAMENTOS (Criação Manual) ---
-MAP_ETAPA_1 = {
+# Mapeia o ITEM para o COLABORADOR
+MAP_ITEM_COLABORADOR = {
+    # Hélio (Etapa 1 e 2)
     "Coifa": "Hélio",
+    "Coifa Epoxi": "Hélio",
     "Exaustor": "Hélio",
     "Chaminé": "Hélio",
     "Chapéu Aletado": "Hélio",
     "Chapéu Canhão": "Hélio",
-    "Porta de Guilhotina fechamento em vidro": "Edison",
-    "Porta de Guilhotina fechamento em pedra": "Edison",
-    "Porta de Guilhotina fechamento em INOX 304": "Edison",
-    "Revestimento Placa Cimenticia na Base": "Renato",
-    "Isolamento térmico de coifa": "Renato",
-}
+    "Revestimento": "Hélio", # E2
+    "Gavetão Inox": "Hélio", # E2
+    "Gavetão Epóxi": "Hélio", # E2
+    "Caixa Braseiro": "Hélio", # E1
 
-MAP_ETAPA_2 = {
-    "Tampa de vidro": "Edison",
-    "Regulagem de balanço": "Luiz",
-    "Sistema Giratório": "Luiz",
+    # Edison (Etapa 1 e 2)
+    "Porta Guilhotina Vidro L": "Edison",
+    "Porta Guilhotina Vidro U": "Edison",
+    "Porta Guilhotina Vidro F": "Edison",
+    "Porta Guilhotina Inox F": "Edison",
+    "Porta Guilhotina Pedra F": "Edison",
+    "Tampa de vidro": "Edison", # E2
+
+    # Renato (Etapa 1)
+    "Revestimento Base": "Renato",
+    "Placa cimenticia Porta": "Renato",
+    "Isolamento Coifa": "Renato",
+
+    # Luiz (Etapa 2)
+    "Regulagem de balanço": "Luiz", # (Item antigo)
+    "Sistema Giratório": "Luiz", # (Item antigo)
     "Moldura Área de fogo": "Luiz",
-    "Bancada interna": "Luiz",
+    "Bancada interna": "Luiz", # (Item antigo)
     "Bifeteira grill": "Luiz",
-    "Revestimento": "Hélio",
-    "Gavetão": "Hélio",
-    "Grelhas": "José",
-    "Espetos": "José",
-    "Sistema de elevar Manual": "José",
-    "Tampa INOX": "Anderson",
-    "Tampa Preto Epoxi": "Anderson",
-}
+    "Cooktop + Bifeteira": "Luiz",
+    "Cooktop": "Luiz",
+    "Balanço 2": "Luiz",
+    "Balanço 3": "Luiz",
+    "Balanço 4": "Luiz",
+    # Giratórios são tratados por lógica especial
+    "Giratório 1L": "Luiz",
+    "Giratório 2L": "Luiz",
 
-MAP_LAREIRAS = {
+    # José (Etapa 2)
+    "Grelhas": "José", # (Item antigo)
+    "Espetos": "José", # (Item antigo)
+    "Sistema de elevar Manual": "José", # (Item antigo)
+    "Grelha de descanso": "José",
+    "Kit 6 Espetos": "José",
+    "Regulagem Comum 2": "José",
+    "Regulagem Comum 3": "José",
+    "Regulagem Comum 4": "José",
+    "Regulagem Comum 5": "José",
+    # Espetos de Giratórios são tratados por lógica especial
+
+    # Anderson (Etapa 2)
+    "Tampa Inox": "Anderson",
+    "Tampa Epoxi": "Anderson",
+    "Tampa INOX": "Anderson", # (Duplicado por segurança)
+    "Tampa Preto Epoxi": "Anderson", # (Duplicado por segurança)
+
+    # Lareiras (Etapa 2)
     "KAM600": "Edison", "KAM700": "Edison", "KAM800": "Edison", "KAM900": "Edison",
     "KAM1000": "Edison", "KAM1100": "Edison", "KAM1200": "Edison",
     "KAM VITRO": "Edison", "LYON": "Edison", "ARGON": "Edison", "GAB1000": "Edison",
     "Chaminé inox": "Anderson",
     "Chaminé Aço Carbono": "Anderson",
-    "Chapéu aletado": "Anderson",
-    "Chapéu Canhão": "Anderson"
+    
+    # Itens Elevar (Etapa 2)
+    "Sistema de Elevar Manual 2 3/16": "José", # (MUDADO DE LUIZ/JOSÉ PARA JOSÉ)
+    "Sistema de Elevar Manual 1/8 e 3/16": "José",
+    "Sistema de Elevar Manual Arg. e 3/16": "José",
+    "Sistema de Elevar Manual Arg. e 1/8": "José",
+    "Sistema de Elevar Motor 2 3/16": "José",
+    "Sistema de Elevar Motor 1/8 e 3/16": "José",
+    "Sistema de Elevar Motor Arg e 3/16": "José",
+    "Sistema de Elevar Motor Arg e 1/8": "José",
 }
+
+# Mapeia quais itens vão para a ETAPA 1
+ITENS_ETAPA_1 = [
+    "Coifa", "Coifa Epoxi", "Exaustor", "Chaminé", "Chapéu Aletado", "Chapéu Canhão", "Caixa Braseiro",
+    "Porta Guilhotina Vidro L", "Porta Guilhotina Vidro U", "Porta Guilhotina Vidro F",
+    "Porta Guilhotina Inox F", "Porta Guilhotina Pedra F",
+    "Revestimento Base", "Placa cimenticia Porta", "Isolamento Coifa"
+]
+# --- FIM: NOVOS MAPEAMENTOS ---
+
 
 # --- Modelos do Banco de Dados (ATUALIZADOS) ---
 
@@ -178,15 +226,13 @@ class Orcamento(db.Model):
     
     data_entrada_producao = db.Column(db.DateTime)
     
-    # ATUALIZAÇÃO (REQ 5): data_visita agora é data_visita_etapa1
-    data_visita = db.Column(db.DateTime, name="data_visita_etapa1") # Renomeado no DB para manter dados
-    responsavel_visita = db.Column(db.String(100)) # Mantido para dados antigos / uso futuro
+    data_visita = db.Column(db.DateTime, name="data_visita_etapa1") 
+    responsavel_visita = db.Column(db.String(100)) 
     
     data_pronto = db.Column(db.DateTime)
     
-    # ATUALIZAÇÃO (REQ 7): data_instalacao agora é data (sem hora)
-    data_instalacao = db.Column(db.DateTime) # Mantido como DateTime para agendamento, mas lógica de edição foca no 'date'
-    responsavel_instalacao = db.Column(db.String(100)) # Mantido para dados antigos / uso futuro
+    data_instalacao = db.Column(db.DateTime) 
+    responsavel_instalacao = db.Column(db.String(100)) 
     
     grupo_origem_standby = db.Column(db.Integer)
     standby_details = db.Column(db.Text, nullable=True)
@@ -206,14 +252,13 @@ class Orcamento(db.Model):
     data_limite_etapa1 = db.Column(db.DateTime)
     data_limite_etapa2 = db.Column(db.DateTime)
     
-    # ATUALIZAÇÃO (REQ 5): Novo campo para data da visita 2
     data_visita_etapa2 = db.Column(db.DateTime)
 
-    # *** INÍCIO DA ALTERAÇÃO (NOVOS CAMPOS) ***
     prazo_dias_etapa1 = db.Column(db.Integer, nullable=True)
     prazo_dias_etapa2 = db.Column(db.Integer, nullable=True)
     numero_cliente = db.Column(db.String(50), nullable=True)
-    # *** FIM DA ALTERAÇÃO ***
+    # --- NOVO CAMPO ADICIONADO ---
+    outro_numero = db.Column(db.String(50), nullable=True)
 
 
     def to_dict(self):
@@ -248,17 +293,14 @@ class Orcamento(db.Model):
             "data_limite_etapa1": self.data_limite_etapa1.strftime('%Y-%m-%d') if self.data_limite_etapa1 else None,
             "data_limite_etapa2": self.data_limite_etapa2.strftime('%Y-%m-%d') if self.data_limite_etapa2 else None,
             
-            # ATUALIZAÇÃO (REQ 5, 7, 8): Ajuste nos campos retornados
             "data_visita_etapa1": self.data_visita.strftime('%Y-%m-%d') if self.data_visita else None,
             "data_visita_etapa2": self.data_visita_etapa2.strftime('%Y-%m-%d') if self.data_visita_etapa2 else None,
             "data_instalacao": self.data_instalacao.strftime('%Y-%m-%d') if self.data_instalacao else None,
             
-            # Campos antigos mantidos para compatibilidade do agendamento
             "data_visita_agendada": self.data_visita.strftime('%Y-%m-%d %H:%M') if self.data_visita else None,
             "responsavel_visita": self.responsavel_visita,
             "data_instalacao_agendada": self.data_instalacao.strftime('%Y-%m-%d %H:%M') if self.data_instalacao else None,
             "responsavel_instalacao": self.responsavel_instalacao,
-            # Fim da compatibilidade
 
             "data_pronto": self.data_pronto.strftime('%Y-%m-%d %H:%M') if self.data_pronto else None,
             "grupo_origem_standby": self.grupo_origem_standby,
@@ -690,45 +732,29 @@ def get_workflow():
 @login_required
 def create_orcamento_manual():
     try:
-        # *** INÍCIO DA ALTERAÇÃO ***
+        # 1. Validação de Arquivo e Campos Principais
         if 'arquivo' not in request.files or not request.files['arquivo'].filename:
             return jsonify({"error": "O anexo de arquivo é obrigatório."}), 400
         
         numero = request.form.get('numero_orcamento')
         cliente = request.form.get('nome_cliente')
-        # Pega os PRAZOS (dias) em vez das datas
         prazo_dias_etapa1_str = request.form.get('prazo_dias_etapa1')
         prazo_dias_etapa2_str = request.form.get('prazo_dias_etapa2')
         etapa1_finalizada_str = request.form.get('etapa1_finalizada')
         
-        # Novos campos
+        if not all([numero, cliente, prazo_dias_etapa1_str, prazo_dias_etapa2_str, etapa1_finalizada_str]):
+             return jsonify({"error": "Todos os campos obrigatórios devem ser preenchidos (Número, Cliente, Prazos, Status Etapa 1)."}), 400
+
+        # 2. Coleta de Dados Adicionais
         endereco = request.form.get('endereco')
-        numero_cliente = request.form.get('numero_cliente') # Opcional
+        numero_cliente = request.form.get('numero_cliente')
+        outro_numero = request.form.get('outro_numero')
 
-        items_etapa1_json = request.form.get('items_etapa1_json', '[]')
-        items_etapa2_json = request.form.get('items_etapa2_json', '[]')
-        manual_items_etapa1_json = request.form.get('manual_items_etapa1_json', '[]')
-        manual_items_etapa2_json = request.form.get('manual_items_etapa2_json', '[]')
-
-        if not numero or not cliente:
-            return jsonify({"error": "Número do Orçamento e Nome do Cliente são obrigatórios."}), 400
+        items_etapa1_list = json.loads(request.form.get('items_etapa1_json', '[]'))
+        items_etapa2_list = json.loads(request.form.get('items_etapa2_json', '[]'))
         
-        if not prazo_dias_etapa1_str or not prazo_dias_etapa2_str or not etapa1_finalizada_str:
-             return jsonify({"error": "Prazos (em dias) e Status da Etapa 1 são obrigatórios."}), 400
-        # *** FIM DA ALTERAÇÃO ***
-
-        items_etapa1_list = json.loads(items_etapa1_json)
-        items_etapa2_list = json.loads(items_etapa2_json)
-        manual_items_etapa1_list = json.loads(manual_items_etapa1_json)
-        manual_items_etapa2_list = json.loads(manual_items_etapa2_json)
-        
-        desc1_items = items_etapa1_list + [m['item'] for m in manual_items_etapa1_list]
-        desc2_items = items_etapa2_list + [m['item'] for m in manual_items_etapa2_list]
-        etapa1_desc = ", ".join(desc1_items)
-        etapa2_desc = ", ".join(desc2_items)
-
+        # 3. Define Grupo e Status Inicial
         etapa_concluida_int = 1 if etapa1_finalizada_str == 'Sim' else 0
-        
         grupo_inicial_id = 1 # Padrão: Entrada de Orçamento
         status_inicial = 'Orçamento Aprovado'
         
@@ -736,28 +762,27 @@ def create_orcamento_manual():
             grupo_inicial_id = 2 # Visitas e Medidas
             status_inicial = 'Agendar Visita'
 
+        # 4. Cria o Orçamento (sem tarefas ainda)
         novo_orcamento = Orcamento(
             numero=numero,
             cliente=cliente,
-            etapa1_descricao=etapa1_desc,
-            etapa2_descricao=etapa2_desc,
+            etapa1_descricao=", ".join(items_etapa1_list), # Salva a descrição
+            etapa2_descricao=", ".join(items_etapa2_list), # Salva a descrição
             grupo_id=grupo_inicial_id, 
             status_atual=status_inicial, 
             last_updated_by_id=current_user.id,
             
-            # *** INÍCIO DA ALTERAÇÃO (SALVANDO NOVOS CAMPOS) ***
             endereco=endereco,
             numero_cliente=numero_cliente,
+            outro_numero=outro_numero,
             prazo_dias_etapa1=int(prazo_dias_etapa1_str),
             prazo_dias_etapa2=int(prazo_dias_etapa2_str),
-            # data_limite_etapa1 e etapa2 ficam nulos por padrão
             etapa_concluida=etapa_concluida_int
-            # *** FIM DA ALTERAÇÃO ***
         )
         db.session.add(novo_orcamento)
-        db.session.commit() # Commit para obter o ID do novo_orcamento
+        db.session.commit() # Commit para obter o ID
 
-        # Salva o arquivo (agora obrigatório)
+        # 5. Salva o Arquivo
         file = request.files['arquivo']
         safe_filename = secure_filename(file.filename)
         target_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
@@ -765,35 +790,75 @@ def create_orcamento_manual():
         anexo = ArquivoAnexado( orcamento_id=novo_orcamento.id, nome_arquivo=safe_filename, caminho_arquivo=f"uploads/{safe_filename}")
         db.session.add(anexo)
 
-        # Processar Tarefas - Etapa 1
-        for item_desc in items_etapa1_list:
-            colaborador = MAP_ETAPA_1.get(item_desc, "Indefinido")
-            tarefa = TarefaProducao(orcamento_id=novo_orcamento.id, colaborador=colaborador, item_descricao=item_desc, status='Não Iniciado', etapa=1)
-            db.session.add(tarefa)
-        for manual_item in manual_items_etapa1_list:
-            tarefa = TarefaProducao(orcamento_id=novo_orcamento.id, colaborador=manual_item['colab'], item_descricao=manual_item['item'], status='Não Iniciado', etapa=1)
-            db.session.add(tarefa)
+        # 6. Processa e Cria as Tarefas (Etapa 1 e 2)
+        giratorio_regex = re.compile(r"Giratório (\dL) (\d)E", re.IGNORECASE)
+        
+        todos_itens_para_processar = [
+            (item, 1) for item in items_etapa1_list
+        ] + [
+            (item, 2) for item in items_etapa2_list
+        ]
 
-        # Processar Tarefas - Etapa 2
-        for item_desc in items_etapa2_list:
-            colaborador = MAP_LAREIRAS.get(item_desc, MAP_ETAPA_2.get(item_desc, "Indefinido"))
-            if colaborador == "Indefinido":
-                for lareira_base in MAP_LAREIRAS:
-                    if item_desc.startswith(lareira_base):
-                        colaborador = MAP_LAREIRAS[lareira_base]
-                        break
+        for item_desc, etapa_num in todos_itens_para_processar:
             
-            tarefa = TarefaProducao(orcamento_id=novo_orcamento.id, colaborador=colaborador, item_descricao=item_desc, status='Não Iniciado', etapa=2)
-            db.session.add(tarefa)
-        for manual_item in manual_items_etapa2_list:
-            tarefa = TarefaProducao(orcamento_id=novo_orcamento.id, colaborador=manual_item['colab'], item_descricao=manual_item['item'], status='Não Iniciado', etapa=2)
-            db.session.add(tarefa)
+            # --- Lógica Especial do Giratório ---
+            match = giratorio_regex.match(item_desc)
+            if match:
+                linhas = match.group(1) # "1L" ou "2L"
+                num_espetos = match.group(2) # "4", "5", etc.
+                
+                # Tarefa 1: Espetos (José)
+                tarefa_espetos = TarefaProducao(
+                    orcamento_id=novo_orcamento.id,
+                    colaborador="José",
+                    item_descricao=f"{num_espetos} Espetos Giratórios",
+                    status='Não Iniciado',
+                    etapa=2 # Giratório é sempre Etapa 2
+                )
+                db.session.add(tarefa_espetos)
+                
+                # Tarefa 2: Sistema (Luiz)
+                tarefa_sistema = TarefaProducao(
+                    orcamento_id=novo_orcamento.id,
+                    colaborador="Luiz",
+                    item_descricao=f"Giratório {linhas}",
+                    status='Não Iniciado',
+                    etapa=2
+                )
+                db.session.add(tarefa_sistema)
+                
+            else:
+                # --- Lógica Padrão de Tarefas ---
+                
+                # Tenta achar o item exato no mapa
+                colaborador = MAP_ITEM_COLABORADOR.get(item_desc)
+                
+                # Se não achou (ex: "KAM800 Dupla Face"), tenta achar a base
+                if not colaborador:
+                    for base_item, colab_mapeado in MAP_ITEM_COLABORADOR.items():
+                        if item_desc.startswith(base_item):
+                            colaborador = colab_mapeado
+                            break
+                
+                # Se ainda não achou, é "Indefinido"
+                if not colaborador:
+                    colaborador = "Indefinido"
+                    
+                tarefa = TarefaProducao(
+                    orcamento_id=novo_orcamento.id,
+                    colaborador=colaborador,
+                    item_descricao=item_desc,
+                    status='Não Iniciado',
+                    etapa=etapa_num
+                )
+                db.session.add(tarefa)
 
+        # 7. Log e Notificação
         details = f"Usuário '{current_user.nome}' criou o orçamento manual '{novo_orcamento.numero}' para o cliente '{novo_orcamento.cliente}'."
         log_activity(novo_orcamento, "Criação Manual", details)
         db.session.commit()
         
-        itens_str = etapa1_desc if etapa_concluida_int == 0 else etapa2_desc
+        itens_str = novo_orcamento.etapa1_descricao if etapa_concluida_int == 0 else novo_orcamento.etapa2_descricao
         if not itens_str: itens_str = "Nenhum"
         
         message = f"📥 Novo Orçamento\n👤 Cliente: {numero} {cliente}\n\n📦 Itens ({'Etapa 1' if etapa_concluida_int == 0 else 'Etapa 2'}): {itens_str}"
@@ -807,15 +872,18 @@ def create_orcamento_manual():
         return jsonify({"error": str(e)}), 500
 # --- FIM da Rota de Criação Manual ---
 
+
+# --- Rota de Upload ZIP (Lógica de Tarefas Removida, pois agora é manual) ---
 @app.route('/api/upload', methods=['POST'])
 @login_required
 def upload_orcamento():
     if 'file' not in request.files: return jsonify({"error": "Nenhum arquivo enviado"}), 400
     file = request.files['file']
     if file.filename == '' or not file.filename.endswith('.zip'): return jsonify({"error": "Arquivo inválido, envie um .zip"}), 400
+    
     json_data = None
     pdf_files = []
-    itens_producao_desc = []
+    
     try:
         with zipfile.ZipFile(file, 'r') as zf:
             for filename in zf.namelist():
@@ -826,6 +894,7 @@ def upload_orcamento():
                     target_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
                     with open(target_path, 'wb') as f: f.write(zf.read(filename))
                     pdf_files.append({"nome": safe_filename, "caminho": f"uploads/{safe_filename}"})
+        
         if not json_data: return jsonify({"error": "Arquivo .json não encontrado no .zip"}), 400
         
         # Uploads ZIP não têm os novos campos de prazo, então ficam nulos
@@ -834,33 +903,37 @@ def upload_orcamento():
             cliente=json_data.get('nome_cliente', 'N/A'),
             grupo_id=1, 
             status_atual='Orçamento Aprovado',
-            etapa1_descricao=json_data.get('itens_etapa_1', ''),
-            etapa2_descricao=json_data.get('itens_etapa_2', ''),
+            etapa1_descricao=json_data.get('itens_etapa_1', ''), # Mantido para referência
+            etapa2_descricao=json_data.get('itens_etapa_2', ''), # Mantido para referência
             last_updated_by_id=current_user.id,
             etapa_concluida=0,
+            # Prazos e telefones ficam nulos
         )
         db.session.add(novo_orcamento)
         db.session.commit()
+        
         for pdf in pdf_files:
             anexo = ArquivoAnexado(orcamento_id=novo_orcamento.id, nome_arquivo=pdf['nome'], caminho_arquivo=pdf['caminho'])
             db.session.add(anexo)
-        if 'tarefas_producao' in json_data:
-            for tarefa_info in json_data['tarefas_producao']:
-                item_desc = tarefa_info.get('item', 'Item não descrito')
-                itens_producao_desc.append(item_desc)
-                colaborador_definido = ITEM_DEFINITIONS_PRODUCAO.get(item_desc, "Indefinido")
-                tarefa = TarefaProducao(orcamento_id=novo_orcamento.id, colaborador=colaborador_definido, item_descricao=item_desc, etapa=1)
-                db.session.add(tarefa)
+        
+        # A lógica de criar tarefas a partir do ZIP foi REMOVIDA
+        # O usuário deve agora entrar manualmente e adicionar as tarefas
+        
         details = f"Usuário '{current_user.nome}' fez upload do orçamento '{novo_orcamento.numero}' (Cliente: {novo_orcamento.cliente}) via .zip."
         log_activity(novo_orcamento, "Upload ZIP", details)
         db.session.commit()
-        itens_str = ", ".join(itens_producao_desc) if itens_producao_desc else "Nenhum"
-        message = f"📥 Novo Orçamento\n👤 Cliente: {novo_orcamento.numero} {novo_orcamento.cliente}\n\n📦 Itens: {itens_str}"
+        
+        itens_str = novo_orcamento.etapa1_descricao or "Nenhum"
+        message = f"📥 Novo Orçamento (ZIP)\n👤 Cliente: {novo_orcamento.numero} {novo_orcamento.cliente}\n\n📦 Itens (Etapa 1): {itens_str}\n\n(Tarefas devem ser adicionadas manualmente)"
         send_whatsapp_notification(message, [PHONE_ADMIN])
+        
         return jsonify(novo_orcamento.to_dict()), 201
+        
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+# --- FIM da Rota de Upload ZIP ---
+
 
 @app.route('/api/orcamento/<int:orc_id>/add_file', methods=['POST'])
 @login_required
@@ -1106,37 +1179,30 @@ def update_orcamento_status(orc_id):
         notification_recipients = LISTA_GERAL
         notification_message = f"🔄 Atualização de Status\n👤 Cliente: {orcamento.numero} {orcamento.cliente}\n\n📍 Mudou o status de: {status_antigo}\n➡️ Para: {novo_status}"
     
-    # *** INÍCIO DA CORREÇÃO (LÓGICA DE CÁLCULO DE DATAS) ***
     if moveu_para_producao:
         data_visita_str = dados_adicionais.get('data_visita')
         if data_visita_str:
             data_visita_obj = parse_datetime(data_visita_str)
-            # Salva a data da visita como a "data de entrada na produção"
             orcamento.data_entrada_producao = data_visita_obj
             
-            # REQ 6: Salva a data da visita no campo da etapa correspondente
             current_etapa_num = orcamento.etapa_concluida + 1
             if current_etapa_num == 1:
-                orcamento.data_visita = data_visita_obj # Salva em data_visita_etapa1
+                orcamento.data_visita = data_visita_obj 
             else:
                 orcamento.data_visita_etapa2 = data_visita_obj
             
-            # REQ 2: Calcula e salva as datas limite
             try:
                 if orcamento.prazo_dias_etapa1:
                     orcamento.data_limite_etapa1 = data_visita_obj + timedelta(days=int(orcamento.prazo_dias_etapa1))
                 if orcamento.prazo_dias_etapa2:
-                    # A data limite 2 também é baseada na *mesma* data de visita/entrada
                     orcamento.data_limite_etapa2 = data_visita_obj + timedelta(days=int(orcamento.prazo_dias_etapa2))
             except Exception as e:
                 print(f"Erro ao calcular datas limite: {e}")
         
-        # Reseta o status das tarefas para "Não Iniciado"
         current_etapa = 2 if orcamento.etapa_concluida >= 1 else 1
         for tarefa in orcamento.tarefas:
             if tarefa.etapa == current_etapa:
                 tarefa.status = 'Não Iniciado'
-    # *** FIM DA CORREÇÃO ***
                 
     try:
         log_cancelamento = (
@@ -1269,28 +1335,23 @@ def move_orcamento(orc_id):
     elif grupo_destino.nome == 'Projetar':
         orcamento.status_atual = 'Desenhar'
     
-    # *** INÍCIO DA CORREÇÃO (LÓGICA DE CÁLCULO DE DATAS) ***
     elif grupo_destino.nome == 'Linha de Produção':
         orcamento.status_atual = 'Não Iniciado'
         data_visita_str = data.get('data_visita')
         if data_visita_str:
             data_visita_obj = parse_datetime(data_visita_str)
-            # Salva a data da visita como a "data de entrada na produção"
             orcamento.data_entrada_producao = data_visita_obj
             
-            # REQ 6: Salva a data da visita no campo da etapa correspondente
             current_etapa_num = orcamento.etapa_concluida + 1
             if current_etapa_num == 1:
-                orcamento.data_visita = data_visita_obj # Salva em data_visita_etapa1
+                orcamento.data_visita = data_visita_obj 
             else:
                 orcamento.data_visita_etapa2 = data_visita_obj
             
-            # REQ 2: Calcula e salva as datas limite
             try:
                 if orcamento.prazo_dias_etapa1:
                     orcamento.data_limite_etapa1 = data_visita_obj + timedelta(days=int(orcamento.prazo_dias_etapa1))
                 if orcamento.prazo_dias_etapa2:
-                    # A data limite 2 também é baseada na *mesma* data de visita/entrada
                     orcamento.data_limite_etapa2 = data_visita_obj + timedelta(days=int(orcamento.prazo_dias_etapa2))
             except Exception as e:
                 print(f"Erro ao calcular datas limite (move): {e}")
@@ -1299,7 +1360,6 @@ def move_orcamento(orc_id):
         for tarefa in orcamento.tarefas:
             if tarefa.etapa == current_etapa:
                 tarefa.status = 'Não Iniciado'
-    # *** FIM DA CORREÇÃO ***
                 
     elif grupo_destino.nome == 'Prontos':
         orcamento.status_atual = 'Agendar Instalação/Entrega' 
@@ -2128,24 +2188,57 @@ def atualizar_tarefas_from_descricao(orcamento, nova_descricao, etapa, map_colab
     # 2. Pega novos itens da textarea (limpos e únicos)
     novos_itens_lista = [item.strip() for item in nova_descricao.split(',') if item.strip()]
     novos_itens_set = set(novos_itens_lista)
-    
-    # 3. Adiciona tarefas que estão na textarea mas não no DB
+
+    # --- Lógica de Divisão do Giratório ---
+    giratorio_regex = re.compile(r"Giratório (\dL) (\d)E", re.IGNORECASE)
+    itens_processados = set() # Para evitar adicionar o item base "Giratório X Y"
+
     for item_desc in novos_itens_set:
+        match = giratorio_regex.match(item_desc)
+        if match and etapa == 2:
+            itens_processados.add(item_desc) # Marca o item "Giratório..." como processado
+            
+            linhas = match.group(1) # "1L" ou "2L"
+            num_espetos = match.group(2) # "4", "5", etc.
+            
+            # Item 1: Espetos
+            item_espetos = f"{num_espetos} Espetos Giratórios"
+            if item_espetos not in itens_existentes:
+                tarefa_espetos = TarefaProducao(
+                    orcamento_id=orcamento.id, colaborador="José",
+                    item_descricao=item_espetos, status='Não Iniciado', etapa=2
+                )
+                db.session.add(tarefa_espetos)
+            else:
+                # Remove da lista de existentes para não ser deletado
+                itens_existentes.pop(item_espetos) 
+            
+            # Item 2: Sistema
+            item_sistema = f"Giratório {linhas}"
+            if item_sistema not in itens_existentes:
+                 tarefa_sistema = TarefaProducao(
+                    orcamento_id=orcamento.id, colaborador="Luiz",
+                    item_descricao=item_sistema, status='Não Iniciado', etapa=2
+                )
+                 db.session.add(tarefa_sistema)
+            else:
+                itens_existentes.pop(item_sistema)
+
+    # 3. Adiciona tarefas que estão na textarea mas não no DB (e não são giratórios)
+    for item_desc in novos_itens_set:
+        if item_desc in itens_processados: # Pula o item "Giratório..."
+            continue
+            
         if item_desc not in itens_existentes:
             # Item novo, precisa ser criado
             colaborador = "Indefinido"
-            # Tenta achar o colaborador no mapa principal
             colaborador = map_colaboradores.get(item_desc, "Indefinido")
             
-            # Se não achou, tenta no mapa de lareiras (só para etapa 2)
-            if colaborador == "Indefinido" and etapa == 2:
-                 colaborador = MAP_LAREIRAS.get(item_desc, "Indefinido")
-                 if colaborador == "Indefinido":
-                    # Lógica de fallback para lareiras (ex: "KAM800 DUPLA FACE")
-                    for lareira_base in MAP_LAREIRAS:
-                        if item_desc.startswith(lareira_base):
-                            colaborador = MAP_LAREIRAS[lareira_base]
-                            break
+            if colaborador == "Indefinido":
+                for base_item, colab_mapeado in map_colaboradores.items():
+                    if item_desc.startswith(base_item):
+                        colaborador = colab_mapeado
+                        break
             
             nova_tarefa = TarefaProducao(
                 orcamento_id=orcamento.id,
@@ -2160,9 +2253,18 @@ def atualizar_tarefas_from_descricao(orcamento, nova_descricao, etapa, map_colab
     # 4. Deleta tarefas que estão no DB mas não mais na textarea
     for item_existente, tarefa_obj in itens_existentes.items():
         if item_existente not in novos_itens_set:
-            # Item foi removido da textarea, deleta a tarefa
-            db.session.delete(tarefa_obj)
-            print(f"Modal Mestre: Deletando tarefa '{item_existente}' (Etapa {etapa})")
+            # Verifica se o item a ser deletado não é parte de um giratório
+            # (Ex: "4 Espetos Giratórios" não deve ser deletado se "Giratório 1L 4E" ainda existir)
+            e_parte_de_giratorio_novo = False
+            if item_existente.endswith("Espetos Giratórios") or item_existente.startswith("Giratório "):
+                for novo_item in novos_itens_set:
+                    if giratorio_regex.match(novo_item):
+                        e_parte_de_giratorio_novo = True
+                        break
+            
+            if not e_parte_de_giratorio_novo:
+                db.session.delete(tarefa_obj)
+                print(f"Modal Mestre: Deletando tarefa '{item_existente}' (Etapa {etapa})")
 
 
 @app.route('/api/orcamento/<int:orc_id>/update_detalhes', methods=['PUT'])
@@ -2184,25 +2286,23 @@ def update_orcamento_detalhes(orc_id):
         orcamento.data_limite_etapa1 = parse_datetime(data.get('data_limite_etapa1'))
         orcamento.data_limite_etapa2 = parse_datetime(data.get('data_limite_etapa2'))
         
-        # REQ 5 & 7: Salva datas de visita/instalação como 'date' (sem hora)
         orcamento.data_visita = parse_datetime(data.get('data_visita_etapa1'))
         orcamento.data_visita_etapa2 = parse_datetime(data.get('data_visita_etapa2'))
         orcamento.data_instalacao = parse_datetime(data.get('data_instalacao'))
         
-        # REQ 8: Remove campos de responsável
-        # orcamento.responsavel_visita = data.get('responsavel_visita')
-        # orcamento.responsavel_instalacao = data.get('responsavel_instalacao')
-        
         nova_desc_etapa1 = data.get('etapa1_descricao', orcamento.etapa1_descricao)
         nova_desc_etapa2 = data.get('etapa2_descricao', orcamento.etapa2_descricao)
 
-        # REQ 4: Atualizar tarefas se a descrição mudou
+        # Atualizar tarefas se a descrição mudou
         if nova_desc_etapa1 != orcamento.etapa1_descricao:
-            atualizar_tarefas_from_descricao(orcamento, nova_desc_etapa1, 1, MAP_ETAPA_1)
+            # Combina os mapas de colaborador
+            mapa_etapa1 = {**MAP_ITEM_COLABORADOR, **ITENS_ETAPA_1_COMO_MAPA} 
+            atualizar_tarefas_from_descricao(orcamento, nova_desc_etapa1, 1, mapa_etapa1)
             orcamento.etapa1_descricao = nova_desc_etapa1
 
         if nova_desc_etapa2 != orcamento.etapa2_descricao:
-            atualizar_tarefas_from_descricao(orcamento, nova_desc_etapa2, 2, MAP_ETAPA_2)
+            mapa_etapa2 = {**MAP_ITEM_COLABORADOR}
+            atualizar_tarefas_from_descricao(orcamento, nova_desc_etapa2, 2, mapa_etapa2)
             orcamento.etapa2_descricao = nova_desc_etapa2
         
         log_activity(orcamento, "Edição Mestre", f"Usuário '{current_user.nome}' atualizou os detalhes completos do orçamento.")
@@ -2246,8 +2346,6 @@ def edit_orcamento_campo(orc_id):
                 
                 # REQ 3: Lógica de Recálculo de Prazo
                 if not data_entrada_antiga: 
-                    # Se não havia data de entrada, não podemos calcular o delta
-                    # O usuário terá que ajustar o limite manualmente
                     print("Nota: Data de entrada definida, mas data antiga não existia. Datas limite não foram recalculadas.")
                 else:
                     if orcamento.data_limite_etapa1:
@@ -2274,9 +2372,14 @@ def edit_orcamento_campo(orc_id):
             setattr(orcamento, campo, valor)
             
         elif campo == 'itens_prontos':
+            # Atualiza a descrição E as tarefas
             if orcamento.etapa_concluida == 0:
+                mapa_etapa1 = {**MAP_ITEM_COLABORADOR, **ITENS_ETAPA_1_COMO_MAPA}
+                atualizar_tarefas_from_descricao(orcamento, valor, 1, mapa_etapa1)
                 orcamento.etapa1_descricao = valor
             else:
+                mapa_etapa2 = {**MAP_ITEM_COLABORADOR}
+                atualizar_tarefas_from_descricao(orcamento, valor, 2, mapa_etapa2)
                 orcamento.etapa2_descricao = valor
         else:
             return jsonify({"error": f"Campo '{campo}' não é editável."}), 400
@@ -2299,6 +2402,13 @@ if __name__ == '__main__':
         os.makedirs(UPLOAD_FOLDER)
     if not os.path.exists(INSTANCE_FOLDER):
         os.makedirs(INSTANCE_FOLDER)
+    
+    # Define um mapa de strings para os itens da Etapa 1 (necessário para a função de edição)
+    ITENS_ETAPA_1_COMO_MAPA = {item: "Indefinido" for item in ITENS_ETAPA_1}
+    for item, colab in MAP_ITEM_COLABORADOR.items():
+        if item in ITENS_ETAPA_1_COMO_MAPA:
+            ITENS_ETAPA_1_COMO_MAPA[item] = colab
+            
     setup_database(app)
     scheduler.init_app(app)
     scheduler.start()
