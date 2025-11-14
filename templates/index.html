@@ -140,11 +140,11 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="modal-criar-numero-cliente">Número Cliente</label>
-                    <input type="text" id="modal-criar-numero-cliente" name="numero_cliente" placeholder="(00)00000-0000">
+                    <input type="text" id="modal-criar-numero-cliente" name="numero_cliente" placeholder="(00) 00000-0000" maxlength="16">
                 </div>
                 <div class="form-group">
                     <label for="modal-criar-outro-numero">Outro Número (Opcional)</label>
-                    <input type="text" id="modal-criar-outro-numero" name="outro_numero" placeholder="(00)00000-0000">
+                    <input type="text" id="modal-criar-outro-numero" name="outro_numero" placeholder="(00) 00000-0000" maxlength="16">
                 </div>
             </div>
             
@@ -152,28 +152,34 @@
                 <label for="modal-criar-endereco">Endereço (Para previsão do tempo)</label>
                 <input type="text" id="modal-criar-endereco" name="endereco" placeholder="Ex: Rua, Número, Bairro, Curitiba">
             </div>
-
-            <div class="form-group">
+            
+            <div class="form-group form-group-file-upload">
                 <label for="modal-criar-arquivo">Anexar Arquivo (Obrigatório)</label>
+                <label for="modal-criar-arquivo" class="btn btn-secondary btn-file-upload">
+                    <span id="file-upload-text">Escolher arquivo...</span>
+                </label>
                 <input type="file" id="modal-criar-arquivo" name="arquivo" required>
             </div>
-            
             <div class="form-row" style="align-items: flex-end;">
                 <div class="form-group-flex">
                     <label>Prazo Etapa 1 (Dias)</label>
-                    <div class="modal-quick-days">
-                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="30" data-dias-target="modal-criar-prazo-dias1">30</button>
-                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="45" data-dias-target="modal-criar-prazo-dias1">45</button>
+                    <div class="prazo-input-group">
+                        <div class="modal-quick-days">
+                            <button type="button" class="btn btn-secondary btn-quick-day" data-dias="30" data-dias-target="modal-criar-prazo-dias1">30</button>
+                            <button type="button" class="btn btn-secondary btn-quick-day" data-dias="45" data-dias-target="modal-criar-prazo-dias1">45</button>
+                        </div>
+                        <input type="number" id="modal-criar-prazo-dias1" name="prazo_dias_etapa1" placeholder="Dias" min="1" required>
                     </div>
-                    <input type="number" id="modal-criar-prazo-dias1" name="prazo_dias_etapa1" placeholder="Dias" min="1" required style="width: 80px;">
                 </div>
                 <div class="form-group-flex">
                     <label>Prazo Etapa 2 (Dias)</label>
-                    <div class="modal-quick-days">
-                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="30" data-dias-target="modal-criar-prazo-dias2">30</button>
-                        <button type="button" class="btn btn-secondary btn-quick-day" data-dias="45" data-dias-target="modal-criar-prazo-dias2">45</button>
+                    <div class="prazo-input-group">
+                        <div class="modal-quick-days">
+                            <button type="button" class="btn btn-secondary btn-quick-day" data-dias="30" data-dias-target="modal-criar-prazo-dias2">30</button>
+                            <button type="button" class="btn btn-secondary btn-quick-day" data-dias="45" data-dias-target="modal-criar-prazo-dias2">45</button>
+                        </div>
+                        <input type="number" id="modal-criar-prazo-dias2" name="prazo_dias_etapa2" placeholder="Dias" min="1" required>
                     </div>
-                    <input type="number" id="modal-criar-prazo-dias2" name="prazo_dias_etapa2" placeholder="Dias" min="1" required style="width: 80px;">
                 </div>
                 <div class="form-group-flex" style="margin-left: 10px;">
                     <label>Etapa 1 Finalizada?</label>
@@ -184,7 +190,6 @@
                     <input type="hidden" id="modal-criar-etapa1-finalizada" name="etapa1_finalizada" value="">
                 </div>
             </div>
-
             <hr>
 
             <h4>Adicionar Itens ao Orçamento</h4>
@@ -221,6 +226,7 @@
             </div>
         </form>
     </div>
+    
     <div id="modal-visita" class="modal hidden">
         <h4>Agendar Visita</h4>
         <label for="modal-visita-data">Data da Visita:</label>
