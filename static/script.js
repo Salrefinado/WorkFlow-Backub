@@ -18,13 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Mapeamento de cabeçalhos das tabelas por grupo
     const groupHeaders = {
-        'Entrada de Orçamento': ['Orçamento', 'Arquivos', 'Status'],
-        'Visitas e Medidas': ['Orçamento', 'Arquivos', 'Status', 'Data Visita', 'Responsável'],
-        'Projetar': ['Orçamento', 'Arquivos', 'Status'],
-        'Linha de Produção': ['Orçamento', 'Arquivos', 'Data Entrada', 'Data Limite', 'Tarefas de Produção'],
-        'Prontos': ['Orçamento', 'Arquivos', 'Status', 'Itens Prontos', 'Data Pronto', 'Data Instalação', 'Responsável Inst.'],
-        'StandBy': ['Orçamento', 'Arquivos', 'Status', 'Motivo'],
-        'Instalados': ['Orçamento', 'Arquivos', 'Status Final']
+        'Entrada de Orçamento': ['Orçamento', 'Link', 'Arquivos', 'Status'],
+        'Visitas e Medidas': ['Orçamento', 'Link', 'Arquivos', 'Status', 'Data Visita', 'Responsável'],
+        'Projetar': ['Orçamento', 'Link', 'Arquivos', 'Status'],
+        'Linha de Produção': ['Orçamento', 'Link', 'Arquivos', 'Data Entrada', 'Data Limite', 'Tarefas de Produção'],
+        'Prontos': ['Orçamento', 'Link', 'Arquivos', 'Status', 'Itens Prontos', 'Data Pronto', 'Data Instalação', 'Responsável Inst.'],
+        'StandBy': ['Orçamento', 'Link', 'Arquivos', 'Status', 'Motivo'],
+        'Instalados': ['Orçamento', 'Link', 'Arquivos', 'Status Final']
     };
 
     // Opções de status para o dropdown de Orçamento
@@ -67,17 +67,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalFileList = document.getElementById('modal-file-list');
     const modalConfirmarDeleteArquivo = document.getElementById('modal-confirmar-delete-arquivo');
 
-    // ==== NOVOS MODAIS DE EDIÇÃO ====
+    // Modais de Edição
     const modalDetalhesOrcamento = document.getElementById('modal-detalhes-orcamento');
     const modalEditSimples = document.getElementById('modal-edit-simples');
+
+    // Modal de Movimentação
+    const modalConfirmarMovimentacao = document.getElementById('modal-confirmar-movimentacao');
     
     // Variáveis de estado
     let projectFilesToUpload = [];
     let currentUploadOrcamentoId = null;
     let weatherForecastData = {};
     let weatherFetchController = null;
+    let openGroupIdOnLoad = null; 
+    let dragOverThrottle = null;
+    
+    // NOVO: Conjunto para armazenar IDs de orçamentos expandidos na Linha de Produção
+    let expandedProductionRows = new Set();
 
-    // === INÍCIO: NOVOS ELEMENTOS DO MODAL DE CRIAÇÃO ===
+    // Elementos do Modal de Criação
     const itemSearchInput = document.getElementById('item-search-input');
     const itemSearchResults = document.getElementById('item-search-results');
     const btnAddItem = document.getElementById('btn-add-item');
@@ -86,15 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const hiddenItemsEtapa1 = document.getElementById('hidden-items-etapa1');
     const hiddenItemsEtapa2 = document.getElementById('hidden-items-etapa2');
 
-    // A nova lista de itens mestra
+    // Lista de itens mestra
     const MASTER_ITEM_LIST = [
-        // Etapa 1
         "Coifa", "Coifa Epoxi", "Exaustor", "Chaminé", "Chapéu Aletado", "Chapéu Canhão", "Caixa Braseiro",
         "Porta Guilhotina Vidro L", "Porta Guilhotina Vidro U", "Porta Guilhotina Vidro F",
         "Porta Guilhotina Inox F", "Porta Guilhotina Pedra F",
         "Revestimento Base", "Placa cimenticia Porta", "Isolamento Coifa",
-
-        // Etapa 2
         "Tampa Inox", "Tampa Epoxi", "Revestimento",
         "Sistema de Elevar Manual 2 3/16", "Sistema de Elevar Manual 1/8 e 3/16",
         "Sistema de Elevar Manual Arg. e 3/16", "Sistema de Elevar Manual Arg. e 1/8",
@@ -106,72 +111,38 @@ document.addEventListener('DOMContentLoaded', () => {
         "Balanço 2", "Balanço 3", "Balanço 4",
         "Kit 6 Espetos", "Regulagem Comum 2", "Regulagem Comum 3", "Regulagem Comum 4", "Regulagem Comum 5",
         "Gavetão Inox", "Gavetão Epóxi", "Moldura Área de fogo", "Grelha de descanso", "Tampa de vidro",
-
-        // Lareiras (Etapa 2)
         "KAM600", "KAM700", "KAM800", "KAM900", "KAM1000", "KAM1100", "KAM1200",
         "KAM VITRO", "LYON", "ARGON", "GAB1000",
         "Chaminé inox", "Chaminé Aço Carbono"
     ];
 
-    // Regras de mapeamento de etapa
     const ETAPA1_ITEMS = [
         "Coifa", "Coifa Epoxi", "Exaustor", "Chaminé", "Chapéu Aletado", "Chapéu Canhão", "Caixa Braseiro",
         "Porta Guilhotina Vidro L", "Porta Guilhotina Vidro U", "Porta Guilhotina Vidro F",
         "Porta Guilhotina Inox F", "Porta Guilhotina Pedra F",
         "Revestimento Base", "Placa cimenticia Porta", "Isolamento Coifa"
     ];
-    // === FIM: NOVOS ELEMENTOS DO MODAL DE CRIAÇÃO ===
 
-
-    /**
-     * Formata uma data ISO para o tempo relativo (ex: "há 5 minutos", "há 2 semanas").
-     */
     function formatTimeAgo(isoDateString) {
         if (!isoDateString) return "";
-        
         const date = new Date(isoDateString);
         const now = new Date();
         const seconds = Math.floor((now - date) / 1000);
-        
         if (seconds < 60) return "Agora mesmo";
-
         const minutes = Math.floor(seconds / 60);
-        if (minutes < 60) {
-            return `há ${minutes} min`;
-        }
-
+        if (minutes < 60) return `há ${minutes} min`;
         const hours = Math.floor(minutes / 60);
-        if (hours < 24) {
-            if (hours === 1) return "há 1h";
-            return `há ${hours}h`;
-        }
-
+        if (hours < 24) return hours === 1 ? "há 1h" : `há ${hours}h`;
         const days = Math.floor(hours / 24);
-        if (days < 7) {
-            if (days === 1) return "Ontem"; 
-            return `há ${days} dias`;
-        }
-
+        if (days < 7) return days === 1 ? "Ontem" : `há ${days} dias`;
         const weeks = Math.floor(days / 7);
-        if (weeks <= 4) { 
-            if (weeks === 1) return "há 1 semana";
-            return `há ${weeks} semanas`;
-        }
-
+        if (weeks <= 4) return weeks === 1 ? "há 1 semana" : `há ${weeks} semanas`;
         const months = Math.floor(days / 30.44); 
-        if (months < 12) {
-            if (months === 1) return "há 1 mês";
-            return `há ${months} meses`;
-        }
-        
+        if (months < 12) return months === 1 ? "há 1 mês" : `há ${months} meses`;
         const years = Math.floor(days / 365.25);
-        if (years === 1) return "há 1 ano";
-        return `há ${years} anos`;
+        return years === 1 ? "há 1 ano" : `há ${years} anos`;
     }
 
-    /**
-     * Atualiza todos os timestamps na tela.
-     */
     function updateTimestamps() {
         const timeElements = document.querySelectorAll('.last-updated-info[data-timestamp]');
         timeElements.forEach(el => {
@@ -184,13 +155,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * Carrega todo o workflow da API e renderiza no quadro.
-     */
     async function loadWorkflow() {
+        const groupIdToOpen = openGroupIdOnLoad;
+        openGroupIdOnLoad = null; 
+        
+        // Recupera grupos abertos para manter estado (opcional, mas bom para UX)
+        const previouslyOpenGroups = Array.from(document.querySelectorAll('.monday-group:not(.collapsed)'))
+            .map(g => g.dataset.groupId);
+
         try {
             const response = await fetch('/api/workflow');
-            
             if (response.status === 401) {
                 window.location.href = '/login?error=Sua sessão expirou.';
                 return;
@@ -217,14 +191,28 @@ document.addEventListener('DOMContentLoaded', () => {
             initDragAndDrop();
             updateTimestamps(); 
 
+            // Lógica de restauração de estado dos grupos
+            if (groupIdToOpen) {
+                // Se houve uma ação explicita que requer abrir um grupo
+                const groupToOpen = document.querySelector(`.monday-group[data-group-id="${groupIdToOpen}"]`);
+                if (groupToOpen) groupToOpen.classList.remove('collapsed');
+            } else if (previouslyOpenGroups.length > 0) {
+                // Restaura os que estavam abertos
+                previouslyOpenGroups.forEach(gid => {
+                    const g = document.querySelector(`.monday-group[data-group-id="${gid}"]`);
+                    if (g) g.classList.remove('collapsed');
+                });
+            } else {
+                // Padrão: abre o primeiro
+                const firstGroup = document.querySelector('.monday-group');
+                if (firstGroup) firstGroup.classList.remove('collapsed');
+            }
+
         } catch (error) {
             console.error('Erro ao carregar workflow:', error);
         }
     }
 
-    /**
-     * Renderiza um único grupo (seção com tabela).
-     */
     function renderGrupo(grupo) {
         const clone = grupoTemplate.content.cloneNode(true);
         const grupoSection = clone.querySelector('.monday-group');
@@ -249,12 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 sortBtn.dataset.sortDirection = 'asc'; 
                 th.appendChild(sortBtn);
             }
-
-            if (text === 'Status') {
-                th.style.width = '220px';
-            }
-            if (text === 'Motivo') {
-                th.style.width = '250px';
+            if (text === 'Motivo') th.style.width = '250px';
+            if (text === 'Link') {
+                th.style.width = '40px';
+                th.style.minWidth = '40px';
             }
             headerRow.appendChild(th);
         });
@@ -263,12 +249,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return grupoSection;
     }
 
-    /**
-     * Roteador: Escolhe qual template de LINHA (TR) usar.
-     */
     function renderOrcamentoRow(orcamento) {
         const grupoNome = orcamento.grupo_nome;
-        
         if (grupoNome === 'Linha de Produção') {
             return renderRowProducao(orcamento);
         } else if (grupoNome === 'Instalados') {
@@ -276,18 +258,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (statusOptionsByGroup[grupoNome]) {
             return renderRowStatus(orcamento); 
         }
-        
         console.warn('Nenhum template de linha encontrado para o grupo:', grupoNome);
         return null;
     }
 
-    /**
-     * Formata data (YYYY-MM-DD HH:MM ou YYYY-MM-DD) ou retorna '---'
-     */
     function formatarData(dataISO, dateOnly = false) {
         if (!dataISO) return '---';
         try {
-            // Se for apenas data (ex: YYYY-MM-DD), ajusta para T00:00:00 local
             if (dataISO.length === 10 && !dataISO.includes('T')) {
                 const [year, month, day] = dataISO.split('-');
                 const dataLocal = new Date(year, month - 1, day);
@@ -296,15 +273,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const ano = dataLocal.getFullYear();
                 return `${dia}/${mes}/${ano}`;
             }
-
-            // Se for datetime completo
             const dataLocal = new Date(dataISO);
             const dia = String(dataLocal.getDate()).padStart(2, '0');
             const mes = String(dataLocal.getMonth() + 1).padStart(2, '0');
             const ano = dataLocal.getFullYear();
-            if (dateOnly) {
-                return `${dia}/${mes}/${ano}`;
-            }
+            if (dateOnly) return `${dia}/${mes}/${ano}`;
             const hora = String(dataLocal.getHours()).padStart(2, '0');
             const min = String(dataLocal.getMinutes()).padStart(2, '0');
             return `${dia}/${mes}/${ano} ${hora}:${min}`;
@@ -317,44 +290,41 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * Renderiza a célula de arquivos (ÍCONE ÚNICO).
-     */
     function renderArquivosCell(arquivos, orcamentoId) {
         const td = document.createElement('td');
         td.className = 'col-arquivos';
-
         const button = document.createElement('button');
         button.className = 'file-pdf-icon-button';
         button.style.backgroundImage = `url('/static/pdf.png')`; 
-        
         button.dataset.orcamentoId = orcamentoId;
         button.dataset.arquivos = JSON.stringify(arquivos); 
-        
         if (arquivos.length > 0) {
             button.classList.add('has-files');
             button.title = `${arquivos.length} arquivo(s) anexado(s). Clique para ver.`;
         } else {
             button.title = 'Nenhum arquivo anexado. Clique para adicionar.';
         }
-        
-        // Adiciona o data-action para o event listener
         button.dataset.action = 'open-file-list';
-        
         td.appendChild(button);
         return td;
     }
+
+    function renderPublicLinkCell(orcamento, row) {
+        const td = row.querySelector('.col-public-link');
+        const publicLinkEl = td.querySelector('.public-link-icon');
+        if (orcamento.public_id) {
+            publicLinkEl.href = `/track/${orcamento.public_id}`;
+            publicLinkEl.style.display = 'inline-block';
+        } else {
+            publicLinkEl.style.display = 'none';
+        }
+        return td;
+    }
     
-    /**
-     * Renderiza a célula de orçamento (função helper).
-     */
     function renderOrcamentoCell(orcamento, row) {
         const td = row.querySelector('.col-orcamento');
-        
-        // O wrapper agora é pego do template
         const wrapper = td.querySelector('.editable-cell-wrapper');
-        wrapper.dataset.orcamentoId = orcamento.id; // Garante que o ID está no wrapper
-        
+        wrapper.dataset.orcamentoId = orcamento.id; 
         wrapper.querySelector('.orc-numero').textContent = orcamento.numero;
         wrapper.querySelector('.orc-cliente').textContent = orcamento.cliente;
 
@@ -367,14 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
             lastUpdatedEl.textContent = '';
         }
         
-        const publicLinkEl = wrapper.querySelector('.public-link-icon');
-        if (orcamento.public_id) {
-            publicLinkEl.href = `/track/${orcamento.public_id}`;
-            publicLinkEl.style.display = 'inline';
-        } else {
-            publicLinkEl.style.display = 'none';
-        }
-
         const standbyInfoEl = wrapper.querySelector('.standby-info-icon');
         if (orcamento.grupo_nome === 'StandBy' && orcamento.standby_details) {
             standbyInfoEl.title = `Motivo: ${orcamento.standby_details}`;
@@ -382,75 +344,49 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             standbyInfoEl.style.display = 'none';
         }
-        
         return td;
     }
 
-    /**
-     * Renderiza a CÉLULA de status (com seletor customizado).
-     */
     function renderStatusCell(orcamento) {
         const clone = rowTemplateStatus.content.querySelector('.col-status').cloneNode(true);
         const statusSelector = clone.querySelector('.status-selector');
-        
         const options = statusOptionsByGroup[orcamento.grupo_nome] || [];
         const currentStatus = orcamento.status_atual;
-        
         populateStatusSelector(statusSelector, options, currentStatus);
-        
         return clone;
     }
     
-    /**
-     * Função helper para popular um seletor de status (tanto de orçamento quanto de tarefa).
-     */
     function populateStatusSelector(selectorElement, optionsList, currentStatus) {
         const display = selectorElement.querySelector('.status-display');
         const dropdown = selectorElement.querySelector('.status-dropdown');
-
         display.textContent = currentStatus || 'Selecione';
         display.dataset.statusValue = currentStatus || '';
-        
         dropdown.innerHTML = ''; 
-        
         optionsList.forEach(optValue => {
             const option = document.createElement('div');
             option.className = 'status-option';
             option.dataset.value = optValue;
-            option.dataset.action = 'select-status-option'; // Ação para o listener
+            option.dataset.action = 'select-status-option'; 
             option.textContent = optValue;
-            
             if (optValue === currentStatus) {
                 option.classList.add('selected');
             }
-            
             dropdown.appendChild(option);
         });
     }
 
-    
-    /**
-     * Renderiza a célula de dados (Data, Responsável, etc)
-     * AGORA COM A CLASSE EDITÁVEL
-     */
     function renderDataCell(texto, isDateColumn = false, isLongText = false, editAction = null) {
          const td = document.createElement('td');
-         
          const textoFormatado = texto || '---';
-         
          if (editAction) {
-             // Se for editável, cria um span clicável dentro do td
              const span = document.createElement('span');
              span.className = 'editable-cell';
              span.dataset.action = editAction;
              span.textContent = textoFormatado;
              td.appendChild(span);
          } else {
-             // Se não for editável, apenas seta o texto
              td.textContent = textoFormatado;
          }
-
-         // Aplica classes de estilo
          if (isLongText) {
             td.className = 'col-data-long-text';
          } else {
@@ -459,52 +395,37 @@ document.addEventListener('DOMContentLoaded', () => {
          return td;
     }
     
-    /**
-     * Renderiza a célula de Standby (editável)
-     */
     function renderStandbyCell(orcamento) {
         const td = document.createElement('td');
-        td.className = 'col-data-long-text'; // Permite quebra de linha
-        
+        td.className = 'col-data-long-text';
         const span = document.createElement('span');
         span.className = 'editable-cell';
         span.dataset.action = 'edit-standby_details';
         span.textContent = orcamento.standby_details || '---';
-        
         td.appendChild(span);
         return td;
     }
 
-    /**
-     * Renderiza a célula de "Data Instalação" (com botão Agendar ou data editável).
-     */
     function renderInstalacaoCell(orcamento) {
         const td = document.createElement('td');
         td.className = 'col-data';
-        
-        if (orcamento.data_instalacao_agendada) { // Usa a data completa para checar se está agendado
-            // Se já tem data, é uma célula de dados editável
+        if (orcamento.data_instalacao_agendada) { 
             const span = document.createElement('span');
             span.className = 'editable-cell';
-            span.dataset.action = 'edit-data_instalacao'; // Ação para abrir o modal de instalação
-            span.textContent = formatarData(orcamento.data_instalacao_agendada); // Mostra data e hora
+            span.dataset.action = 'edit-data_instalacao'; 
+            span.textContent = formatarData(orcamento.data_instalacao_agendada); 
             td.appendChild(span);
         } else {
-            // Se não tem data, é o botão de agendar
             const button = document.createElement('button');
             button.className = 'btn-agendar';
             button.textContent = 'Agendar';
             button.dataset.orcamentoId = orcamento.id;
-            button.dataset.action = 'agendar-instalacao'; // Ação para o event listener
+            button.dataset.action = 'agendar-instalacao'; 
             td.appendChild(button);
         }
         return td;
     }
 
-
-    /**
-     * Renderiza a linha genérica de STATUS (Entrada, Visitas, Projetar, Prontos, StandBy).
-     */
     function renderRowStatus(orcamento) {
         const clone = rowTemplateStatus.content.cloneNode(true);
         const row = clone.querySelector('tr');
@@ -514,67 +435,49 @@ document.addEventListener('DOMContentLoaded', () => {
         row.dataset.dataInstalacao = orcamento.data_instalacao_agendada || '';
         row.dataset.standbyDetails = orcamento.standby_details || '';
 
-        // Limpa o <tr> (exceto a primeira célula de orçamento que veio do template)
         const orcamentoCell = row.querySelector('.col-orcamento');
+        const linkCell = row.querySelector('.col-public-link'); 
         row.innerHTML = ''; 
         row.appendChild(orcamentoCell); 
+        row.appendChild(linkCell); 
         
-        renderOrcamentoCell(orcamento, row); // Popula a célula de orçamento
+        renderOrcamentoCell(orcamento, row);
+        renderPublicLinkCell(orcamento, row);
         
         row.appendChild(renderArquivosCell(orcamento.arquivos, orcamento.id));
-        
         const statusCell = renderStatusCell(orcamento);
         row.appendChild(statusCell);
         
         if (orcamento.grupo_nome === 'Visitas e Medidas') {
-            // Data Visita (Editável)
             row.appendChild(renderDataCell(
-                formatarData(orcamento.data_visita_agendada), // Mostra data e hora 
-                true, 
-                false, 
-                'edit-data_visita' // Ação para abrir modal de visita
+                formatarData(orcamento.data_visita_agendada), 
+                true, false, 'edit-data_visita'
             ));
-            // Responsável Visita (Editável)
             row.appendChild(renderDataCell(
                 orcamento.responsavel_visita, 
-                false, 
-                false, 
-                'edit-responsavel_visita' // Ação para abrir modal simples
+                false, false, 'edit-responsavel_visita'
             ));
         } else if (orcamento.grupo_nome === 'Prontos') {
-            // Itens Prontos (Editável)
              row.appendChild(renderDataCell(
                 orcamento.itens_prontos, 
-                false, 
-                true, 
-                'edit-itens_prontos' // Ação para abrir modal simples (textarea)
+                false, true, 'edit-itens_prontos'
             ));
-            // Data Pronto (Editável)
             row.appendChild(renderDataCell(
                 formatarData(orcamento.data_pronto), 
-                true, 
-                false, 
-                'edit-data_pronto' // Ação para abrir modal simples (date)
+                true, false, 'edit-data_pronto'
             ));
-            // Data Instalação (Célula especial com botão ou data)
             row.appendChild(renderInstalacaoCell(orcamento));
-            // Responsável Instalação (Editável)
             row.appendChild(renderDataCell(
                 orcamento.responsavel_instalacao, 
-                false, 
-                false, 
-                'edit-responsavel_instalacao' // Ação para abrir modal simples
+                false, false, 'edit-responsavel_instalacao'
             ));
         } else if (orcamento.grupo_nome === 'StandBy') {
-            // Motivo (Editável)
             row.appendChild(renderStandbyCell(orcamento));
         }
-        
         return row;
     }
     
-    // --- Funções para "Linha de Produção" ---
-
+    // Renderização específica para Linha de Produção
     function renderRowProducao(orcamento) {
         const clone = rowTemplateProducao.content.cloneNode(true);
         const row = clone.querySelector('tr');
@@ -589,31 +492,33 @@ document.addEventListener('DOMContentLoaded', () => {
         row.dataset.dataLimite = dataLimiteProd || ''; 
         
         renderOrcamentoCell(orcamento, row); 
+        row.appendChild(renderPublicLinkCell(orcamento, row));
         row.appendChild(renderArquivosCell(orcamento.arquivos, orcamento.id));
         
-        // Data Entrada (Editável) - REQ 3
+        // Data Entrada (Editável)
         row.appendChild(renderDataCell(
             formatarData(orcamento.data_entrada_producao, true), 
-            true, 
-            false, 
-            'edit-data_entrada_producao' // Ação para abrir modal simples (date)
+            true, false, 'edit-data_entrada_producao'
         ));
-        // Data Limite (Editável) - REQ 3
+        // Data Limite (Editável)
         row.appendChild(renderDataCell(
             formatarData(dataLimiteProd, true), 
-            true, 
-            false, 
-            'edit-data_limite' // Ação para abrir modal simples (date)
+            true, false, 'edit-data_limite'
         ));
 
+        // Tarefas (Serviços)
         const tarefasCell = document.createElement('td');
         tarefasCell.className = 'col-tarefas-producao';
-        
         tarefasCell.dataset.tarefas = JSON.stringify(orcamento.tarefas); 
-        renderTarefasCompressed(orcamento.tarefas, orcamento.id, tarefasCell);
+        
+        // ATUALIZAÇÃO: Verifica se o orçamento está na lista de expandidos
+        if (expandedProductionRows.has(String(orcamento.id))) {
+            renderTarefasExpanded(orcamento.tarefas, orcamento.id, tarefasCell);
+        } else {
+            renderTarefasCompressed(orcamento.tarefas, orcamento.id, tarefasCell);
+        }
         
         row.appendChild(tarefasCell);
-        
         return row;
     }
 
@@ -655,7 +560,6 @@ document.addEventListener('DOMContentLoaded', () => {
             expandedContainer.appendChild(header);
             
             const items = agrupado[colaborador]; 
-            
             const combined_description = items.map(t => t.item_descricao).join(', ');
             
             let representative_status = 'Não Iniciado';
@@ -671,7 +575,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const all_tarefa_ids = items.map(t => t.id);
-
             const virtualTarefa = {
                 id: all_tarefa_ids.join(','), 
                 item_descricao: combined_description,
@@ -683,7 +586,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         cell.appendChild(expandedContainer);
-
         const actionsContainer = document.createElement('div');
         actionsContainer.className = 'tarefas-actions';
         actionsContainer.innerHTML = `
@@ -699,6 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
         row.dataset.orcamentoId = orcamento.id;
 
         renderOrcamentoCell(orcamento, row);
+        row.appendChild(renderPublicLinkCell(orcamento, row));
         row.appendChild(renderArquivosCell(orcamento.arquivos, orcamento.id));
         
         return row;
@@ -721,10 +624,8 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleUpload() {
         const file = fileInput.files[0];
         if (!file) return alert('Por favor, selecione um arquivo .zip.');
-
         const formData = new FormData();
         formData.append('file', file);
-
         try {
             const response = await fetch('/api/upload', { method: 'POST', body: formData });
             if (response.status === 401) { window.location.href = '/login'; return; }
@@ -737,8 +638,6 @@ document.addEventListener('DOMContentLoaded', () => {
             alert(`Erro no upload: ${error.message}`);
         }
     }
-
-    // --- LÓGICA DE MODAIS E ATUALIZAÇÃO DE STATUS ---
     
     function toInputDate(date) {
         const offset = date.getTimezoneOffset();
@@ -746,10 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return localDate.toISOString().split('T')[0];
     }
     
-    // Converte YYYY-MM-DD para um objeto Date (ignorando fuso)
     function parseInputDate(dateStr) {
         if (!dateStr) return null;
-        // Se tiver hora (vindo do formatarData), ignora
         if (dateStr.includes(' ')) {
             dateStr = dateStr.split(' ')[0].split('/').reverse().join('-');
         }
@@ -757,10 +654,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Date(year, month - 1, day);
     }
 
-    // Converte YYYY-MM-DDTHH:MM para um objeto Date
     function parseInputDateTime(dateTimeStr) {
         if (!dateTimeStr) return null;
-        // Se tiver formato DD/MM/YYYY HH:MM
         if (dateTimeStr.includes('/')) {
             const [datePart, timePart] = dateTimeStr.split(' ');
             const [day, month, year] = datePart.split('/');
@@ -770,12 +665,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return new Date(dateTimeStr);
     }
 
-    // Formata um objeto Date para YYYY-MM-DDTHH:MM (input)
     function toInputDateTime(date) {
         if (!date) return "";
         const offset = date.getTimezoneOffset();
         const localDate = new Date(date.getTime() - (offset*60*1000));
-        return localDate.toISOString().slice(0, 16); // Corta segundos e 'Z'
+        return localDate.toISOString().slice(0, 16); 
     }
     
     function showModal(modal) {
@@ -785,15 +679,14 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function hideModals() {
         modalOverlay.classList.add('hidden');
-        
-        // Esconde todos os modais
         document.querySelectorAll('.modal').forEach(modal => {
             modal.classList.add('hidden');
         });
-        
-        // Limpa formulários específicos
         document.getElementById('form-criar-manual').reset();
-        // === INÍCIO: Limpeza do Novo Modal ===
+        const fileUploadText = document.getElementById('file-upload-text');
+        const fileUploadLabel = fileUploadText.closest('label');
+        if (fileUploadText) fileUploadText.textContent = 'Escolher arquivo...';
+        if (fileUploadLabel) fileUploadLabel.classList.remove('file-selected');
         addedItemsEtapa1List.innerHTML = '';
         addedItemsEtapa2List.innerHTML = '';
         hiddenItemsEtapa1.value = '[]';
@@ -805,43 +698,48 @@ document.addEventListener('DOMContentLoaded', () => {
         modalCriarOrcamento.querySelectorAll('.btn-item-select.selected').forEach(btn => {
             btn.classList.remove('selected');
         });
-        // === FIM: Limpeza do Novo Modal ===
-        
         document.getElementById('form-detalhes-orcamento').reset();
         document.getElementById('form-edit-simples').reset();
-
         document.getElementById('modal-standby-motivo').value = '';
         document.getElementById('modal-tarefa-item').value = '';
         document.querySelectorAll('#modal-tarefa-colaborador-list .btn-item-select.selected').forEach(btn => {
             btn.classList.remove('selected');
         });
-        
         document.getElementById('modal-projeto-arquivo').value = ''; 
         document.getElementById('modal-projeto-file-list').innerHTML = ''; 
         document.getElementById('modal-projeto-data-visita').value = ''; 
         projectFilesToUpload = []; 
-
+        document.getElementById('modal-confirmar-movimentacao').classList.add('hidden');
         document.getElementById('modal-upload-arquivo-input').value = '';
         document.getElementById('modal-upload-file-list').innerHTML = '';
         document.getElementById('file-list-modal-body').innerHTML = '';
         document.getElementById('modal-file-list-input').value = '';
         document.getElementById('modal-file-list-preview').innerHTML = '';
-        
         currentUploadOrcamentoId = null;
-
         document.getElementById('modal-visita-weather').classList.add('hidden');
         document.getElementById('modal-instalacao-weather').classList.add('hidden');
         document.getElementById('modal-visita-data').removeEventListener('input', handleWeatherCheck);
         document.getElementById('modal-instalacao-data').removeEventListener('input', handleWeatherCheck);
-        if (weatherFetchController) {
-            weatherFetchController.abort();
-        }
+        if (weatherFetchController) weatherFetchController.abort();
         weatherForecastData = {};
     }
 
-    // --- LÓGICA DO MODAL DE CRIAÇÃO (ATUALIZADA) ---
+    function formatarTelefone(event) {
+        const input = event.target;
+        let valor = input.value.replace(/\D/g, ''); 
+        valor = valor.substring(0, 11); 
+        if (valor.length > 10) {
+            valor = valor.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3');
+        } else if (valor.length > 6) {
+            valor = valor.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+        } else if (valor.length > 2) {
+            valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+        } else if (valor.length > 0) {
+            valor = valor.replace(/^(\d*)/, '($1');
+        }
+        input.value = valor;
+    }
 
-    // Função de debounce para a pesquisa
     function debounceSearch(func, delay) {
         let timeout;
         return function(...args) {
@@ -851,34 +749,27 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Filtra e exibe os resultados da pesquisa de itens
     function handleItemSearch() {
         const query = itemSearchInput.value.toLowerCase().trim();
         itemSearchResults.innerHTML = '';
-
         if (query.length === 0) {
             itemSearchResults.classList.add('hidden');
             return;
         }
-
         const filteredItems = MASTER_ITEM_LIST.filter(item => 
             item.toLowerCase().includes(query)
         );
-
         if (filteredItems.length > 0) {
             filteredItems.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'search-result-item-modal';
-                
-                // Determina a etapa para exibir no hint
                 const isEtapa1 = ETAPA1_ITEMS.includes(item);
                 const etapaHint = isEtapa1 ? "Etapa 1" : "Etapa 2";
-
                 div.innerHTML = `<strong>${item}</strong> <span>(${etapaHint})</span>`;
                 div.dataset.item = item;
                 div.onclick = () => {
-                    itemSearchInput.value = item; // Preenche a barra
-                    itemSearchResults.classList.add('hidden'); // Esconde resultados
+                    itemSearchInput.value = item; 
+                    itemSearchResults.classList.add('hidden'); 
                     itemSearchInput.focus();
                 };
                 itemSearchResults.appendChild(div);
@@ -889,45 +780,32 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Adiciona o item (da barra de pesquisa) a uma das listas
     function handleAddItem() {
         const itemText = itemSearchInput.value.trim();
         if (!itemText) return;
-
-        // Verifica se o item já foi adicionado
         const allAddedItems = [
             ...Array.from(addedItemsEtapa1List.querySelectorAll('li')),
             ...Array.from(addedItemsEtapa2List.querySelectorAll('li'))
         ];
         const isDuplicate = allAddedItems.some(li => li.dataset.item.toLowerCase() === itemText.toLowerCase());
-
         if (isDuplicate) {
             alert('Este item já foi adicionado.');
             return;
         }
-
-        // Determina a etapa
         let targetList;
-        // Tenta encontrar uma correspondência exata (case-insensitive) na lista mestre
         const masterItemMatch = MASTER_ITEM_LIST.find(masterItem => masterItem.toLowerCase() === itemText.toLowerCase());
-        
         if (masterItemMatch) {
-            // Se achou, usa a regra de etapa
             if (ETAPA1_ITEMS.includes(masterItemMatch)) {
                 targetList = addedItemsEtapa1List;
             } else {
                 targetList = addedItemsEtapa2List;
             }
         } else {
-            // Se não achou (item customizado), vai para Etapa 1 por padrão
             targetList = addedItemsEtapa1List;
         }
-
-        // Cria e adiciona o <li>
         const li = document.createElement('li');
         li.dataset.item = itemText;
         li.textContent = itemText;
-        
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.textContent = 'x';
@@ -936,44 +814,35 @@ document.addEventListener('DOMContentLoaded', () => {
             li.remove();
             updateHiddenItemInputs();
         };
-        
         li.appendChild(removeBtn);
         targetList.appendChild(li);
-
-        updateHiddenItemInputs(); // Atualiza os inputs hidden
-        
-        // Limpa a pesquisa
+        updateHiddenItemInputs(); 
         itemSearchInput.value = '';
         itemSearchResults.innerHTML = '';
         itemSearchResults.classList.add('hidden');
         itemSearchInput.focus();
     }
     
-    // Atualiza os inputs hidden com os JSONs das listas de itens
     function updateHiddenItemInputs() {
         const items1 = Array.from(addedItemsEtapa1List.querySelectorAll('li')).map(li => li.dataset.item);
         const items2 = Array.from(addedItemsEtapa2List.querySelectorAll('li')).map(li => li.dataset.item);
-        
         hiddenItemsEtapa1.value = JSON.stringify(items1);
         hiddenItemsEtapa2.value = JSON.stringify(items2);
     }
 
-
     function openCriarModal() {
         return new Promise((resolve, reject) => {
             showModal(modalCriarOrcamento);
-            
-            // Limpa o estado anterior
-            hideModals(); // Usa a função de limpeza
-            showModal(modalCriarOrcamento); // Reabre o modal limpo
-
+            hideModals(); 
+            showModal(modalCriarOrcamento); 
             document.getElementById('modal-criar-cancel').onclick = () => {
                 hideModals(); reject(new Error('Cancelado pelo usuário'));
             };
-
-            // Lógica do botão Sim/Não
             const etapaHiddenInput = document.getElementById('modal-criar-etapa1-finalizada');
             const etapaBtnGroup = document.getElementById('etapa1-finalizada-group');
+            etapaBtnGroup.querySelectorAll('.btn-item-select.selected').forEach(btn => {
+                btn.classList.remove('selected');
+            });
             etapaBtnGroup.querySelectorAll('.btn-item-select').forEach(btn => {
                 btn.onclick = () => {
                     etapaBtnGroup.querySelector('.btn-item-select.selected')?.classList.remove('selected');
@@ -981,8 +850,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     etapaHiddenInput.value = btn.dataset.value;
                 };
             });
-            
-            // Lógica dos botões de dias
             modalCriarOrcamento.querySelectorAll('.btn-quick-day').forEach(btn => {
                 btn.onclick = () => {
                     const dias = btn.dataset.dias;
@@ -993,33 +860,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
             });
-
-            // Lógica da pesquisa de itens
             itemSearchInput.addEventListener('input', debounceSearch(handleItemSearch, 200));
             btnAddItem.addEventListener('click', handleAddItem);
-            
-            // Permite adicionar com "Enter" na barra de pesquisa
             itemSearchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault(); // Impede o submit do formulário
-                    // Se um item estiver destacado nos resultados, usa ele
+                    e.preventDefault(); 
                     const firstResult = itemSearchResults.querySelector('.search-result-item-modal');
                     if (firstResult && !itemSearchResults.classList.contains('hidden')) {
                         itemSearchInput.value = firstResult.dataset.item;
                         itemSearchResults.classList.add('hidden');
                     }
-                    handleAddItem(); // Adiciona o que estiver na barra
+                    handleAddItem(); 
                 }
             });
-            
-            // Fecha resultados da busca se clicar fora
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.item-search-container')) {
                     itemSearchResults.classList.add('hidden');
                 }
             });
-            
-            // Não faz nada com os complementos (removidos)
+            document.getElementById('modal-criar-numero-cliente').addEventListener('input', formatarTelefone);
+            document.getElementById('modal-criar-outro-numero').addEventListener('input', formatarTelefone);
+            const fileInput = document.getElementById('modal-criar-arquivo');
+            const fileUploadText = document.getElementById('file-upload-text');
+            const fileUploadLabel = fileUploadText.closest('label');
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    fileUploadText.textContent = fileInput.files[0].name;
+                    fileUploadLabel.classList.add('file-selected');
+                } else {
+                    fileUploadText.textContent = 'Escolher arquivo...';
+                    fileUploadLabel.classList.remove('file-selected');
+                }
+            });
         });
     }
 
@@ -1027,35 +899,21 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const form = e.target;
         const formData = new FormData(form);
-
         const arquivo = formData.get('arquivo');
         if (!arquivo || arquivo.size === 0) {
             alert('O anexo de arquivo é obrigatório.');
             return;
         }
-
         const etapaFinalizada = formData.get('etapa1_finalizada');
         if (!formData.get('numero_orcamento') || !formData.get('nome_cliente')) {
             alert('Número do Orçamento e Nome do Cliente são obrigatórios.'); return;
         }
-        
         if (!formData.get('prazo_dias_etapa1') || !formData.get('prazo_dias_etapa2')) {
             alert('Os Prazos (em dias) da Etapa 1 e Etapa 2 são obrigatórios.'); return;
         }
-
         if (!etapaFinalizada) {
             alert('Por favor, selecione se a Etapa 1 já foi finalizada (Sim ou Não).'); return;
         }
-        
-        // Os inputs hidden (hiddenItemsEtapa1 e hiddenItemsEtapa2) já são
-        // atualizados em tempo real pela função updateHiddenItemInputs(),
-        // então não precisamos mais coletar os itens manualmente aqui.
-        // Apenas renomeamos os inputs hidden no HTML para 'items_etapa1_json' e 'items_etapa2_json'
-        
-        // (O FormData já pega os valores de hidden-items-etapa1 e hidden-items-etapa2)
-        // Renomeei os inputs no HTML, então o backend receberá:
-        // name="items_etapa1_json" e name="items_etapa2_json"
-
         try {
             const response = await fetch('/api/orcamento/create_manual', { method: 'POST', body: formData });
             if (response.status === 401) { window.location.href = '/login'; return; }
@@ -1069,23 +927,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- FIM DA LÓGICA DE CRIAÇÃO ---
-
-    function setDateTimeTime(inputElement, timeStr) { // "08:00"
-        const [hour, minute] = timeStr.split(':');
-        let currentValue = inputElement.value;
-        let datePart;
-        if (currentValue && currentValue.includes('T')) {
-            datePart = currentValue.split('T')[0];
-        } else {
-            const today = new Date();
-            datePart = toInputDate(today);
-        }
-        inputElement.value = `${datePart}T${hour}:${minute}`;
-        inputElement.dispatchEvent(new Event('input'));
-    }
-
-    // --- Funções de Previsão do Tempo (Sem alteração) ---
     function debounce(func, delay) {
         let timeout;
         return function(...args) {
@@ -1094,17 +935,14 @@ document.addEventListener('DOMContentLoaded', () => {
             timeout = setTimeout(() => func.apply(context, args), delay);
         };
     }
+
     async function fetchWeather(orcamentoId) {
         if (weatherForecastData[orcamentoId] && weatherForecastData[orcamentoId] !== 'loading') {
             return weatherForecastData[orcamentoId];
         }
-        if (weatherForecastData[orcamentoId] === 'loading') {
-            return null;
-        }
+        if (weatherForecastData[orcamentoId] === 'loading') return null;
         weatherForecastData[orcamentoId] = 'loading';
-        if (weatherFetchController) {
-            weatherFetchController.abort();
-        }
+        if (weatherFetchController) weatherFetchController.abort();
         weatherFetchController = new AbortController();
         const signal = weatherFetchController.signal;
         try {
@@ -1117,15 +955,13 @@ document.addEventListener('DOMContentLoaded', () => {
             weatherForecastData[orcamentoId] = data;
             return data;
         } catch (error) {
-            if (error.name === 'AbortError') {
-                console.log('Fetch de previsão anterior cancelado.');
-                return null;
-            }
+            if (error.name === 'AbortError') return null;
             console.error("Erro ao buscar previsão:", error.message);
             weatherForecastData[orcamentoId] = { error: error.message };
             return weatherForecastData[orcamentoId];
         }
     }
+
     async function checkWeatherForecast(orcamentoId, dateInputEl, weatherDisplayEl) {
         const selectedDateTime = dateInputEl.value;
         const weatherIconEl = weatherDisplayEl.querySelector('.weather-icon');
@@ -1142,9 +978,7 @@ document.addEventListener('DOMContentLoaded', () => {
         weatherTextEl.textContent = 'Verificando previsão...';
         const forecastData = await fetchWeather(orcamentoId);
         if (!forecastData || forecastData === 'loading') {
-            if (forecastData !== 'loading') {
-                 weatherTextEl.textContent = '...';
-            }
+            if (forecastData !== 'loading') weatherTextEl.textContent = '...';
             return; 
         }
         if (forecastData.error) {
@@ -1199,37 +1033,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Abre modal de Visita (Contextual)
-     */
     function openVisitaModal(orcamentoId, dataVisita = '', responsavelVisita = '') {
         return new Promise((resolve, reject) => {
             modalVisita.dataset.orcamentoId = orcamentoId;
             showModal(modalVisita);
-            
             const dataInput = document.getElementById('modal-visita-data');
             const respInput = document.getElementById('modal-visita-responsavel');
-            
-            // Popula com dados existentes (se houver)
             dataInput.value = dataVisita ? toInputDateTime(parseInputDateTime(dataVisita)) : '';
             respInput.value = responsavelVisita || '';
-            
             modalVisita.querySelectorAll('.modal-quick-days button[data-name]').forEach(btn => {
-                btn.onclick = () => {
-                    respInput.value = btn.dataset.name;
-                };
+                btn.onclick = () => { respInput.value = btn.dataset.name; };
             });
             modalVisita.querySelectorAll('.modal-quick-days button[data-time]').forEach(btn => {
-                btn.onclick = () => {
-                    setDateTimeTime(dataInput, btn.dataset.time);
-                };
+                btn.onclick = () => { setDateTimeTime(dataInput, btn.dataset.time); };
             });
-
             dataInput.addEventListener('input', handleWeatherCheck);
-            if (dataInput.value) {
-                dataInput.dispatchEvent(new Event('input'));
-            }
-
+            if (dataInput.value) dataInput.dispatchEvent(new Event('input'));
             document.getElementById('modal-visita-save').onclick = () => {
                 const data = {
                     data_visita: dataInput.value,
@@ -1247,37 +1066,21 @@ document.addEventListener('DOMContentLoaded', () => {
             };
         });
     }
-    
-    /**
-     * Abre modal de Instalação (Contextual)
-     */
+
     function openInstalacaoModal(orcamentoId, etapaConcluida = '0', dataInstalacao = '', responsavelInstalacao = '') {
          return new Promise((resolve, reject) => {
             modalInstalacao.dataset.orcamentoId = orcamentoId;
             showModal(modalInstalacao);
-            
             const dataInput = document.getElementById('modal-instalacao-data');
             const respInput = document.getElementById('modal-instalacao-responsavel');
-            
             dataInput.value = dataInstalacao ? toInputDateTime(parseInputDateTime(dataInstalacao)) : '';
             respInput.value = responsavelInstalacao || '';
-
-            // Auto-preenche responsável se estiver vazio
-            if (!respInput.value) {
-                respInput.value = (etapaConcluida == '0') ? 'Renato' : 'Paulo';
-            }
-            
+            if (!respInput.value) respInput.value = (etapaConcluida == '0') ? 'Renato' : 'Paulo';
             modalInstalacao.querySelectorAll('.modal-quick-days button[data-time]').forEach(btn => {
-                btn.onclick = () => {
-                    setDateTimeTime(dataInput, btn.dataset.time);
-                };
+                btn.onclick = () => { setDateTimeTime(dataInput, btn.dataset.time); };
             });
-
             dataInput.addEventListener('input', handleWeatherCheck);
-            if (dataInput.value) {
-                dataInput.dispatchEvent(new Event('input'));
-            }
-
+            if (dataInput.value) dataInput.dispatchEvent(new Event('input'));
             document.getElementById('modal-instalacao-save').onclick = () => {
                 const data = {
                     data_instalacao: dataInput.value,
@@ -1296,7 +1099,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Modal de confirmação "Instalado"
     function openInstaladoModal() {
         return new Promise((resolve, reject) => {
             showModal(modalInstalado);
@@ -1312,18 +1114,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Modal de Standby (Contextual)
     function openStandbyModal(motivoAtual = '') {
         return new Promise((resolve, reject) => {
             showModal(modalStandby);
             const motivoInput = document.getElementById('modal-standby-motivo');
-            motivoInput.value = motivoAtual || ''; // Popula com motivo existente
-            
+            motivoInput.value = motivoAtual || ''; 
             document.getElementById('modal-standby-save').onclick = () => {
                 const motivo = motivoInput.value;
-                if (!motivo) {
-                    return alert('Por favor, informe o motivo.');
-                }
+                if (!motivo) return alert('Por favor, informe o motivo.');
                 hideModals();
                 resolve({ standby_details: motivo });
             };
@@ -1334,7 +1132,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal de Confirmação (Genérico)
     function openConfirmarCancelamentoModal(tipo) {
         return new Promise((resolve) => { 
             const texto = document.getElementById('modal-confirmar-texto');
@@ -1355,7 +1152,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Funções de Upload de Arquivo (Sem alteração) ---
+    function openConfirmarMovimentacaoModal(grupoAntigoNome, grupoNovoNome) {
+        return new Promise((resolve) => {
+            const texto = document.getElementById('modal-confirmar-movimentacao-texto');
+            texto.innerHTML = `Tem certeza que deseja mover o item de <strong>${grupoAntigoNome}</strong> para <strong>${grupoNovoNome}</strong>?`;
+            showModal(modalConfirmarMovimentacao);
+            document.getElementById('modal-confirmar-movimentacao-save').onclick = () => {
+                hideModals(); 
+                resolve(true); 
+            };
+            document.getElementById('modal-confirmar-movimentacao-cancel').onclick = () => {
+                hideModals(); 
+                resolve(false); 
+            };
+        });
+    }
+
     function openUploadModal(orcamentoId) {
         currentUploadOrcamentoId = orcamentoId;
         projectFilesToUpload = [];
@@ -1432,10 +1244,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await loadWorkflow();
         }
     }
-    // --- Fim Funções Upload Arquivo ---
 
-
-    // --- Modal Anexar Projeto (Contextual) ---
     function openAnexarProjetoModal() {
         return new Promise((resolve, reject) => {
             showModal(modalAnexarProjeto);
@@ -1443,9 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dropZone = document.getElementById('modal-projeto-dropzone');
             const fileInput = document.getElementById('modal-projeto-arquivo');
             const fileList = document.getElementById('modal-projeto-file-list');
-            
             const dataVisitaInput = document.getElementById('modal-projeto-data-visita');
-
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
             });
@@ -1482,27 +1289,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     renderFileList_ProjetoModal();
                 }
             };
-
-            // --- Salvar (CORRIGIDO) ---
             document.getElementById('modal-projeto-save').onclick = () => {
                 const dataVisita = dataVisitaInput.value;
                 if (!dataVisita) {
                     return alert('A "Data da Visita (Obrigatório)" deve ser preenchida.');
                 }
-
                 if (projectFilesToUpload.length === 0) {
                     return alert('É obrigatório anexar pelo menos um arquivo de projeto.');
                 }
-                
-                const data = { 
-                    files: projectFilesToUpload,
-                    data_visita: dataVisita 
-                };
-                
+                const data = { files: projectFilesToUpload, data_visita: dataVisita };
                 hideModals();
                 resolve(data);
             };
-            
             document.getElementById('modal-projeto-cancel').onclick = () => {
                 hideModals();
                 reject(new Error('Cancelado pelo usuário'));
@@ -1510,7 +1308,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Modal Adicionar Tarefa (Contextual)
     function openAddTarefaModal(buttonEl) {
         const orcamentoId = buttonEl.closest('.monday-row').dataset.orcamentoId;
         document.getElementById('modal-tarefa-orcamento-id').value = orcamentoId;
@@ -1545,41 +1342,59 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Função central para processar a mudança de status do ORÇAMENTO.
-     */
     async function processOrcamentoStatusChange(orcamentoId, novoStatus, etapaConcluida) {
         try {
             let dados_adicionais = {};
             const row = document.querySelector(`tr[data-orcamento-id="${orcamentoId}"]`);
             const currentGroupName = row.closest('.monday-group').querySelector('.group-title').textContent;
 
+            // --- LÓGICA DE FLUXO SIMPLIFICADA ---
+
             if (currentGroupName === 'Entrada de Orçamento') {
-                if (novoStatus === 'Mandar para Produção') {
-                    const dados_data = await openAnexarProjetoModal(); 
-                    dados_adicionais.data_visita = dados_data.data_visita;
-                    await handleUploadArquivos(orcamentoId, dados_data.files);
-                } else if (novoStatus === 'Standby') {
+                // Se for "Mandar para Produção", apenas atualiza status (vai para Projetar)
+                // SEM pedir modal de arquivos/data.
+                if (novoStatus === 'Standby') {
                     dados_adicionais = await openStandbyModal();
                 }
             }
-            
-            else if (currentGroupName === 'Projetar' && novoStatus === 'Aprovado para Produção') {
-                const dados_com_arquivos = await openAnexarProjetoModal();
-                await handleUploadArquivos(orcamentoId, dados_com_arquivos.files);
-                dados_adicionais.data_visita = dados_com_arquivos.data_visita;
-            }
-
-            else if (novoStatus === 'Agendar Visita') {
-                const dataVisitaAtual = row.dataset.dataVisita;
-                if (dataVisitaAtual && dataVisitaAtual !== 'null') {
-                    const confirmed = await openConfirmarCancelamentoModal('visita');
-                    if (confirmed) {
-                        dados_adicionais.data_visita = null;
+            else if (currentGroupName === 'Visitas e Medidas') {
+                // Se for "Mandar para Produção", apenas atualiza status (vai para Projetar)
+                // Limpa data de visita se existir
+                if (novoStatus === 'Mandar para Produção') {
+                     if (row.dataset.dataVisita && row.dataset.dataVisita !== 'null') {
+                        dados_adicionais.data_visita = null; 
                         dados_adicionais.responsavel_visita = null;
-                    } else {
-                        throw new Error('Cancelado pelo usuário');
                     }
+                }
+                else if (novoStatus === 'Agendar Visita') {
+                    const dataVisitaAtual = row.dataset.dataVisita;
+                    if (dataVisitaAtual && dataVisitaAtual !== 'null') {
+                        const confirmed = await openConfirmarCancelamentoModal('visita');
+                        if (confirmed) {
+                            dados_adicionais.data_visita = null;
+                            dados_adicionais.responsavel_visita = null;
+                        } else {
+                            throw new Error('Cancelado pelo usuário');
+                        }
+                    }
+                }
+                else if (novoStatus === 'Visita Agendada') {
+                    dados_adicionais = await openVisitaModal(orcamentoId, row.dataset.dataVisita, row.dataset.responsavelVisita);
+                }
+                else if (novoStatus === 'Standby') {
+                    dados_adicionais = await openStandbyModal(row.dataset.standbyDetails);
+                }
+            }
+            else if (currentGroupName === 'Projetar') {
+                 // AQUI SIM: Se sair de Projetar para "Aprovado para Produção" (vai para Linha de Produção)
+                 // Deve pedir o modal com arquivos e data.
+                 if (novoStatus === 'Aprovado para Produção') {
+                    const dados_com_arquivos = await openAnexarProjetoModal();
+                    await handleUploadArquivos(orcamentoId, dados_com_arquivos.files);
+                    dados_adicionais.data_visita = dados_com_arquivos.data_visita;
+                }
+                else if (novoStatus === 'StandBy') {
+                     dados_adicionais = await openStandbyModal(row.dataset.standbyDetails);
                 }
             }
             else if (novoStatus === 'Agendar Instalação/Entrega') {
@@ -1594,31 +1409,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
-            else if (novoStatus === 'Visita Agendada') {
-                dados_adicionais = await openVisitaModal(orcamentoId, row.dataset.dataVisita, row.dataset.responsavelVisita);
-            } else if (novoStatus === 'Instalação Agendada') {
+            else if (novoStatus === 'Instalação Agendada') {
                 dados_adicionais = await openInstalacaoModal(orcamentoId, etapaConcluida, row.dataset.dataInstalacao, row.dataset.responsavelInstalacao);
             } else if (novoStatus === 'Instalado' || novoStatus === 'Entregue') {
                 dados_adicionais = await openInstaladoModal();
-            
-            } else if (novoStatus === 'Mandar para Produção' && currentGroupName === 'Visitas e Medidas') {
-                if (row.dataset.dataVisita && row.dataset.dataVisita !== 'null') {
-                    dados_adicionais.data_visita = null; // Cancela a visita antiga
-                    dados_adicionais.responsavel_visita = null;
-                }
-                
-                const dados_data = await openAnexarProjetoModal(); 
-                dados_adicionais.data_visita = dados_data.data_visita;
-                await handleUploadArquivos(orcamentoId, dados_data.files);
-
-            } else if (novoStatus === 'Standby') {
+            } else if (novoStatus === 'Standby' || novoStatus === 'StandBy') {
                  if (currentGroupName !== 'Entrada de Orçamento') {
                     dados_adicionais = await openStandbyModal(row.dataset.standbyDetails);
                  }
             }
-            
             await updateStatus(orcamentoId, novoStatus, dados_adicionais);
-            
         } catch (error) {
             if (error.message === 'Cancelado pelo usuário') {
                 console.log('Operação cancelada.');
@@ -1630,15 +1430,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * Função central para processar a mudança de status da TAREFA.
-     */
     async function processTarefaStatusChange(tarefaIdsString, novoStatus) {
         const tarefaIds = tarefaIdsString.split(',');
         if (!tarefaIds || tarefaIds.length === 0) return;
         
         const firstTarefaId = tarefaIds[0]; 
-
         try {
             const response = await fetch(`/api/tarefa/${firstTarefaId}/status`, {
                 method: 'PUT',
@@ -1660,7 +1456,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 loadWorkflow(); 
             }
-            
             if (novoStatus === 'StandBy') {
                  await updateStatus(result.id, 'StandBy');
             }
@@ -1670,16 +1465,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Função de update de status (com animação)
-     */
     async function updateStatus(orcamentoId, novoStatus, dados_adicionais = {}) {
         const row = document.querySelector(`tr[data-orcamento-id="${orcamentoId}"]`);
         let grupoAntigoId = null;
         if (row) {
             grupoAntigoId = row.closest('.monday-group').dataset.groupId;
         }
-
         try {
             const response = await fetch(`/api/orcamento/${orcamentoId}/status`, {
                 method: 'PUT',
@@ -1692,12 +1483,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 401) { window.location.href = '/login'; return; }
             const result = await response.json(); 
             if (!response.ok) throw new Error(result.error);
-            
             if (row && grupoAntigoId && result.grupo_id != grupoAntigoId) {
                 row.classList.add('row-moving');
                 await new Promise(resolve => setTimeout(resolve, 500)); 
             }
-            
             await loadWorkflow();
         } catch (error) {
             console.error('Erro ao atualizar status:', error);
@@ -1706,54 +1495,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /**
-     * Ordena as linhas do grupo de produção pela data limite.
-     */
     function handleSortByDate(sortBtn) {
         const tbody = sortBtn.closest('.monday-group').querySelector('.monday-tbody');
         if (!tbody) return;
-
         const currentDirection = sortBtn.dataset.sortDirection; 
         const newDirection = currentDirection === 'desc' ? 'asc' : 'desc';
         sortBtn.dataset.sortDirection = newDirection;
-        
         if (newDirection === 'desc') {
             sortBtn.innerHTML = '▼'; 
         } else {
             sortBtn.innerHTML = '▲'; 
         }
-
         const rows = Array.from(tbody.querySelectorAll('.monday-row'));
-
         rows.sort((rowA, rowB) => {
             const dateStrA = rowA.dataset.dataLimite;
             const dateStrB = rowB.dataset.dataLimite;
-
             if (!dateStrA && !dateStrB) return 0;
             if (!dateStrA) return 1; 
             if (!dateStrB) return -1; 
-
             const dateA = new Date(dateStrA + "T00:00:00").getTime();
             const dateB = new Date(dateStrB + "T00:00:00").getTime();
-            
             if (newDirection === 'desc') {
                 return dateB - dateA;
             } else {
                 return dateA - dateB;
             }
         });
-
         rows.forEach(row => tbody.appendChild(row));
     }
     
+    function handleDragOverGroup(e) {
+        if (dragOverThrottle) return;
+        dragOverThrottle = setTimeout(() => {
+            dragOverThrottle = null;
+        }, 200); 
+        const title = e.target.closest('.group-title');
+        if (title) {
+            const group = title.closest('.monday-group');
+            if (group && group.classList.contains('collapsed')) {
+                // ATUALIZADO: Não fecha mais os outros grupos
+                group.classList.remove('collapsed');
+            }
+        }
+    }
+
     function handleToggleTarefas(buttonEl) {
         const action = buttonEl.dataset.action;
         const cell = buttonEl.closest('.col-tarefas-producao');
         const orcamentoId = buttonEl.closest('.monday-row').dataset.orcamentoId;
         const tarefas = JSON.parse(cell.dataset.tarefas);
+        
         if (action === 'expand') {
+            // Adiciona ao conjunto de expandidos
+            expandedProductionRows.add(String(orcamentoId));
             renderTarefasExpanded(tarefas, orcamentoId, cell);
         } else {
+            // Remove do conjunto de expandidos
+            expandedProductionRows.delete(String(orcamentoId));
             renderTarefasCompressed(tarefas, orcamentoId, cell);
         }
     }
@@ -1762,6 +1560,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('group-title')) {
             const group = e.target.closest('.monday-group');
             if (group) {
+                // ATUALIZADO: Simplesmente alterna a classe 'collapsed'
+                // Não fecha mais os outros grupos
                 group.classList.toggle('collapsed');
             }
         }
@@ -1771,26 +1571,18 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.status-selector.active').forEach(selector => {
             if (selector !== exceptThisOne) {
                 selector.classList.remove('active');
-                
                 const tableWrapper = selector.closest('.table-wrapper');
-                if (tableWrapper) {
-                    tableWrapper.classList.remove('table-wrapper-dropdown-active');
-                }
+                if (tableWrapper) tableWrapper.classList.remove('table-wrapper-dropdown-active');
                 const parentGroup = selector.closest('.monday-group');
-                if (parentGroup) {
-                    parentGroup.classList.remove('group-z-index-lift');
-                }
+                if (parentGroup) parentGroup.classList.remove('group-z-index-lift');
                 const parentRow = selector.closest('.monday-row');
-                if (parentRow) {
-                    parentRow.classList.remove('row-z-index-lift');
-                }
+                if (parentRow) parentRow.classList.remove('row-z-index-lift');
             }
         });
     }
     
-    // --- LÓGICA DE DRAG & DROP (MODIFICADA) ---
-    
     function initDragAndDrop() {
+        document.removeEventListener('dragover', handleDragOverGroup);
         const tbodys = document.querySelectorAll('.monday-tbody');
         tbodys.forEach(tbody => {
             new Sortable(tbody, {
@@ -1799,20 +1591,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 handle: '.monday-row',
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
+                onStart: function() {
+                    document.addEventListener('dragover', handleDragOverGroup);
+                },
                 onEnd: async (evt) => {
+                    document.removeEventListener('dragover', handleDragOverGroup);
                     const orcamentoId = evt.item.dataset.orcamentoId;
                     const novoGrupoId = evt.to.closest('.monday-group').dataset.groupId;
                     const grupoAntigoId = evt.from.closest('.monday-group').dataset.groupId;
-                    
                     if (novoGrupoId !== grupoAntigoId) {
                         let dados_adicionais = {};
-                        
                         const grupoAntigoNome = evt.from.closest('.monday-group').querySelector('.group-title').textContent;
                         const grupoNovoNome = evt.to.closest('.monday-group').querySelector('.group-title').textContent;
-
+                        const moveConfirmed = await openConfirmarMovimentacaoModal(grupoAntigoNome, grupoNovoNome);
+                        if (!moveConfirmed) {
+                            loadWorkflow();
+                            return;
+                        }
                         const dataVisitaAtual = evt.item.dataset.dataVisita;
                         const dataInstalacaoAtual = evt.item.dataset.dataInstalacao;
-
                         if (dataVisitaAtual && dataVisitaAtual !== 'null') {
                             const confirmed = await openConfirmarCancelamentoModal('visita');
                             if (confirmed) {
@@ -1830,11 +1627,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                         }
-
-                        if ((grupoAntigoNome === 'Projetar' && grupoNovoNome === 'Linha de Produção') || 
-                            (grupoAntigoNome === 'Visitas e Medidas' && grupoNovoNome === 'Linha de Produção') ||
-                            (grupoAntigoNome === 'Entrada de Orçamento' && grupoNovoNome === 'Linha de Produção')) {
-                            try {
+                        
+                        // Verifica se está entrando em Linha de Produção (de qualquer lugar)
+                        // para pedir os dados (arquivos/data)
+                        if (grupoNovoNome === 'Linha de Produção') {
+                             try {
                                 const dados_modal = await openAnexarProjetoModal();
                                 await handleUploadArquivos(orcamentoId, dados_modal.files);
                                 dados_adicionais.data_visita = dados_modal.data_visita;
@@ -1853,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 return;
                             }
                         }
-                         handleManualMove(orcamentoId, novoGrupoId, grupoAntigoId, dados_adicionais);
+                        handleManualMove(orcamentoId, novoGrupoId, grupoAntigoId, dados_adicionais);
                     }
                 }
             });
@@ -1866,13 +1663,11 @@ document.addEventListener('DOMContentLoaded', () => {
             row.classList.add('row-moving');
             await new Promise(resolve => setTimeout(resolve, 500)); 
         }
-
         try {
             const body = { 
                 novo_grupo_id: novoGrupoId, 
                 ...dados_adicionais 
             };
-            
             const response = await fetch(`/api/orcamento/${orcamentoId}/move`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -1881,7 +1676,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 401) { window.location.href = '/login'; return; }
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
-            
+            openGroupIdOnLoad = novoGrupoId;
             await loadWorkflow();
         } catch (error) {
              console.error('Erro ao mover orçamento:', error);
@@ -1889,11 +1684,6 @@ document.addEventListener('DOMContentLoaded', () => {
              loadWorkflow();
         }
     }
-
-
-    // ===============================================
-    // ==== LÓGICA DE BUSCA GLOBAL (Sem alteração) ====
-    // ===============================================
 
     function renderSearchResults(results) {
         globalSearchResults.innerHTML = '';
@@ -1961,42 +1751,25 @@ document.addEventListener('DOMContentLoaded', () => {
         globalSearchResults.classList.add('hidden');
         globalSearchInput.value = '';
     });
-    // ==== FIM DA LÓGICA DE BUSCA GLOBAL ====
 
-
-    // ========================================================
-    // ==== INÍCIO: NOVOS MODAIS DE EDIÇÃO (LÓGICA) ====
-    // ========================================================
-
-    /**
-     * Abre o Modal "Mestre" de Detalhes do Orçamento
-     */
     async function openDetalhesModal(orcamentoId) {
         showModal(modalDetalhesOrcamento);
-        
         try {
             const response = await fetch(`/api/orcamento/${orcamentoId}/detalhes`);
             if (!response.ok) throw new Error('Falha ao carregar detalhes');
             const data = await response.json();
-
-            // Popula o formulário
             document.getElementById('detalhes-orcamento-id').value = data.id;
             document.getElementById('detalhes-numero').value = data.numero || '';
             document.getElementById('detalhes-cliente').value = data.cliente || '';
             document.getElementById('detalhes-endereco').value = data.endereco || '';
             document.getElementById('detalhes-etapa1-concluida').value = data.etapa_concluida || 0;
-            
-            // REQ 5, 6, 7: Popula as novas datas (agora são 'date')
             document.getElementById('detalhes-data-limite1').value = data.data_limite_etapa1 ? data.data_limite_etapa1.split('T')[0] : '';
             document.getElementById('detalhes-data-limite2').value = data.data_limite_etapa2 ? data.data_limite_etapa2.split('T')[0] : '';
             document.getElementById('detalhes-data-visita-etapa1').value = data.data_visita_etapa1 ? data.data_visita_etapa1.split('T')[0] : '';
             document.getElementById('detalhes-data-visita-etapa2').value = data.data_visita_etapa2 ? data.data_visita_etapa2.split('T')[0] : '';
             document.getElementById('detalhes-data-instalacao').value = data.data_instalacao ? data.data_instalacao.split('T')[0] : '';
-            
-            // REQ 4: Popula textareas de itens
             document.getElementById('detalhes-itens-etapa1').value = data.etapa1_descricao || '';
             document.getElementById('detalhes-itens-etapa2').value = data.etapa2_descricao || '';
-
         } catch (error) {
             console.error("Erro ao carregar detalhes:", error);
             hideModals();
@@ -2004,31 +1777,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    /**
-     * Salva os dados do Modal "Mestre"
-     */
     async function handleDetalhesSubmit(e) {
         e.preventDefault();
         const orcamentoId = document.getElementById('detalhes-orcamento-id').value;
-        
         const data = {
             numero: document.getElementById('detalhes-numero').value,
             cliente: document.getElementById('detalhes-cliente').value,
             endereco: document.getElementById('detalhes-endereco').value,
             etapa_concluida: parseInt(document.getElementById('detalhes-etapa1-concluida').value, 10),
-            
-            // REQ 5, 6, 7: Envia as datas corretas
             data_limite_etapa1: document.getElementById('detalhes-data-limite1').value || null,
             data_limite_etapa2: document.getElementById('detalhes-data-limite2').value || null,
             data_visita_etapa1: document.getElementById('detalhes-data-visita-etapa1').value || null,
             data_visita_etapa2: document.getElementById('detalhes-data-visita-etapa2').value || null,
             data_instalacao: document.getElementById('detalhes-data-instalacao').value || null,
-
-            // REQ 4: Envia as descrições dos itens
             etapa1_descricao: document.getElementById('detalhes-itens-etapa1').value,
             etapa2_descricao: document.getElementById('detalhes-itens-etapa2').value,
         };
-
         try {
             const response = await fetch(`/api/orcamento/${orcamentoId}/update_detalhes`, {
                 method: 'PUT',
@@ -2038,18 +1802,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 401) { window.location.href = '/login'; return; }
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
-            
             hideModals();
-            await loadWorkflow(); // Recarrega tudo
+            await loadWorkflow(); 
         } catch (error) {
             console.error('Erro ao salvar detalhes:', error);
             alert(`Erro ao salvar: ${error.message}`);
         }
     }
     
-    /**
-     * Abre o Modal de Edição Rápida/Simples
-     */
     function openEditSimplesModal(orcamentoId, campo, valorAtual, titulo, tipoInput = 'text') {
         return new Promise((resolve, reject) => {
             document.getElementById('modal-edit-simples-titulo').textContent = titulo;
@@ -2061,17 +1821,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const inputDate = document.getElementById('edit-simples-valor-date');
             const inputTextarea = document.getElementById('edit-simples-valor-textarea');
 
-            // Esconde todos
             inputText.style.display = 'none';
             inputDate.style.display = 'none';
             inputTextarea.style.display = 'none';
 
             let inputAtivo;
 
-            // Mostra o input correto e popula o valor
             if (tipoInput === 'date') {
                 inputAtivo = inputDate;
-                // Converte DD/MM/YYYY (do formatarData) para YYYY-MM-DD (do input)
                 inputAtivo.value = valorAtual ? toInputDate(parseInputDate(valorAtual)) : '';
             } else if (tipoInput === 'textarea') {
                 inputAtivo = inputTextarea;
@@ -2080,13 +1837,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 inputAtivo = inputText;
                 inputAtivo.value = valorAtual.replace('---','') || '';
             }
-            
             inputAtivo.style.display = 'block';
-            
             showModal(modalEditSimples);
             inputAtivo.focus();
-            
-            // Remove listeners antigos para evitar duplicação
             const saveBtn = document.getElementById('modal-edit-simples-save');
             const cancelBtn = document.getElementById('modal-edit-simples-cancel');
             
@@ -2099,26 +1852,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     valor: inputAtivo.value
                 });
             };
-
             const cancelHandler = () => {
                 removeListeners();
                 hideModals();
                 reject(new Error('Cancelado pelo usuário'));
             };
-
             function removeListeners() {
                 saveBtn.removeEventListener('click', saveHandler);
                 cancelBtn.removeEventListener('click', cancelHandler);
             }
-
             saveBtn.addEventListener('click', saveHandler);
             cancelBtn.addEventListener('click', cancelHandler);
         });
     }
 
-    /**
-     * Salva o dado do Modal de Edição Rápida
-     */
     async function handleEditSimplesSubmit(orcamentoId, campo, valor) {
         try {
             const response = await fetch(`/api/orcamento/${orcamentoId}/edit_campo`, {
@@ -2129,22 +1876,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.status === 401) { window.location.href = '/login'; return; }
             const result = await response.json();
             if (!response.ok) throw new Error(result.error);
-            
             hideModals();
-            await loadWorkflow(); // Recarrega tudo
+            await loadWorkflow(); 
         } catch (error) {
             console.error(`Erro ao editar campo ${campo}:`, error);
             alert(`Erro ao salvar: ${error.message}`);
         }
     }
-
-
-    // ========================================================
-    // ==== FIM: NOVOS MODAIS DE EDIÇÃO (LÓGICA) ====
-    // ========================================================
-
-
-    // --- Inicialização e Event Listeners (Restante) ---
     
     fileInput.addEventListener('change', handleUpload);
     
@@ -2154,12 +1892,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Listeners dos formulários dos modais
     document.getElementById('form-criar-manual').addEventListener('submit', handleCriarManualSubmit);
     document.getElementById('form-detalhes-orcamento').addEventListener('submit', handleDetalhesSubmit);
     document.getElementById('modal-detalhes-cancel').addEventListener('click', hideModals);
 
-    
     modalTarefaSave.addEventListener('click', handleAddTarefaSubmit);
     modalTarefaCancel.addEventListener('click', hideModals);
     
@@ -2172,18 +1908,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-
-    // ========================================================
-    // ==== LISTENER DE CLIQUE PRINCIPAL (ATUALIZADO) ====
-    // ========================================================
     board.addEventListener('click', async (e) => {
         const target = e.target;
-        // Busca o elemento clicável mais próximo que tenha um 'data-action'
         const actionTarget = target.closest('[data-action]');
         
         if (!actionTarget) {
-            // Se clicou fora de uma ação, verifica se foi no título do grupo
             handleGroupToggle(e);
+            return;
+        }
+
+        if (actionTarget.dataset.action === 'open-public-link') {
+            console.log('Link público clicado.');
+            e.stopPropagation(); 
             return;
         }
         
@@ -2194,18 +1930,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             switch (action) {
-                // --- Ações do Modal Mestre ---
                 case 'open-detalhes': {
                     if (orcamentoId) await openDetalhesModal(orcamentoId);
                     break;
                 }
-
-                // --- Ações de Edição Rápida ---
                 case 'edit-data_visita': {
-                    const dataVisita = row.dataset.dataVisita; // data_visita_agendada
+                    const dataVisita = row.dataset.dataVisita; 
                     const respVisita = row.querySelector('[data-action="edit-responsavel_visita"]')?.textContent || '';
                     const dados = await openVisitaModal(orcamentoId, dataVisita, respVisita.replace('---',''));
-                    // Salva ambos os campos, mesmo que só um tenha mudado
                     await handleEditSimplesSubmit(orcamentoId, 'data_visita', dados.data_visita);
                     await handleEditSimplesSubmit(orcamentoId, 'responsavel_visita', dados.responsavel_visita);
                     break;
@@ -2216,19 +1948,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     await handleEditSimplesSubmit(orcamentoId, dados.campo, dados.valor);
                     break;
                 }
-                // REQ 3: Lógica de data de entrada
                 case 'edit-data_entrada_producao': {
                     const dataEntrada = actionTarget.textContent.replace('---','');
                     const dados = await openEditSimplesModal(orcamentoId, 'data_entrada_producao', dataEntrada, 'Editar Data Entrada Produção', 'date');
                     await handleEditSimplesSubmit(orcamentoId, dados.campo, dados.valor);
                     break;
                 }
-                // REQ 3: Lógica de data limite
                 case 'edit-data_limite': {
                     const dataLimite = actionTarget.textContent.replace('---','');
-                    const campo = (etapaConcluida === '0') ? 'data_limite_etapa1' : 'data_limite_etapa2';
                     const dados = await openEditSimplesModal(orcamentoId, 'data_limite', dataLimite, `Editar Data Limite (Etapa ${parseInt(etapaConcluida) + 1})`, 'date');
-                    // O backend saberá qual data_limite (1 ou 2) atualizar com base no 'campo'
                     await handleEditSimplesSubmit(orcamentoId, dados.campo, dados.valor);
                     break;
                 }
@@ -2245,7 +1973,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     break;
                 }
                 case 'edit-data_instalacao': {
-                    const dataInst = row.dataset.dataInstalacao; // data_instalacao_agendada
+                    const dataInst = row.dataset.dataInstalacao; 
                     const respInst = row.querySelector('[data-action="edit-responsavel_instalacao"]')?.textContent || '';
                     const dados = await openInstalacaoModal(orcamentoId, etapaConcluida, dataInst, respInst.replace('---',''));
                     await handleEditSimplesSubmit(orcamentoId, 'data_instalacao', dados.data_instalacao);
@@ -2264,8 +1992,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     await handleEditSimplesSubmit(orcamentoId, dados.campo, dados.valor);
                     break;
                 }
-
-                // --- Ações de Botões e Status (Lógica antiga movida para cá) ---
                 case 'agendar-instalacao': {
                     const dados = await openInstalacaoModal(orcamentoId, etapaConcluida);
                     await updateStatus(orcamentoId, 'Instalação Agendada', dados);
@@ -2289,24 +2015,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     openAddTarefaModal(actionTarget);
                     break;
                 
-                // --- Ações de Dropdown (divididas) ---
-                case 'open-status-dropdown': {
-                    const selector = actionTarget.closest('.status-selector');
-                    const isActive = selector.classList.contains('active');
-                    const tableWrapper = selector.closest('.table-wrapper');
-                    const parentGroup = selector.closest('.monday-group');
-                    const parentRow = selector.closest('.monday-row');
-
-                    closeAllStatusDropdowns(selector); 
-
-                    if (!isActive) {
-                        selector.classList.add('active');
-                        if (tableWrapper) tableWrapper.classList.add('table-wrapper-dropdown-active');
-                        if (parentGroup) parentGroup.classList.add('group-z-index-lift');
-                        if (parentRow) parentRow.classList.add('row-z-index-lift');
-                    }
-                    break;
-                }
                 case 'select-status-option': {
                     const selector = actionTarget.closest('.status-selector');
                     const novoStatus = actionTarget.dataset.value;
@@ -2326,6 +2034,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         await processOrcamentoStatusChange(orcamentoId, novoStatus, etapaConcluida);
 
                     } else if (type === 'tarefa') {
+                        // CORREÇÃO: Adicionada lógica para atualizar status da tarefa (serviço)
                         const tarefaDiv = actionTarget.closest('.tarefa-producao'); 
                         const tarefaIdsString = tarefaDiv.dataset.tarefaIds; 
                         const display = selector.querySelector('.status-display');
@@ -2336,39 +2045,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     break;
                 }
+                case 'open-status-dropdown': {
+                    const selector = actionTarget.closest('.status-selector');
+                    const isActive = selector.classList.contains('active');
+                    const tableWrapper = selector.closest('.table-wrapper');
+                    const parentGroup = selector.closest('.monday-group');
+                    const parentRow = selector.closest('.monday-row');
+
+                    closeAllStatusDropdowns(selector); 
+
+                    if (!isActive) {
+                        selector.classList.add('active');
+                        if (tableWrapper) tableWrapper.classList.add('table-wrapper-dropdown-active');
+                        if (parentGroup) parentGroup.classList.add('group-z-index-lift');
+                        if (parentRow) parentRow.classList.add('row-z-index-lift');
+                    }
+                    break;
+                }
             }
         } catch (error) {
             if (error.message === 'Cancelado pelo usuário') {
                 console.log('Ação cancelada pelo usuário.');
-                loadWorkflow(); // Recarrega para garantir consistência visual
+                loadWorkflow(); 
             } else {
                 console.error('Erro na delegação de clique:', error);
             }
         }
     });
 
-    // --- Delegação de Eventos para 'change' (Uploads) ---
     board.addEventListener('change', (e) => {
-        // Esta função está vazia agora que o upload de arquivo tem seu próprio modal
     });
 
-    // --- Listeners Globais ---
     document.addEventListener('click', (e) => {
-        // Fecha dropdowns
         if (!e.target.closest('.status-selector')) {
             closeAllStatusDropdowns(); 
         }
-        // Fecha busca
         if (!e.target.closest('.header-search-container')) {
             globalSearchResults.classList.add('hidden');
         }
-        // === ATUALIZADO: Fecha busca de itens do modal ===
         if (!e.target.closest('.item-search-container')) {
             if(itemSearchResults) itemSearchResults.classList.add('hidden');
         }
     });
 
-    // --- Listeners para Modais de Arquivo (Sem alteração) ---
     const uploadDropZone = document.getElementById('modal-upload-dropzone');
     const uploadFileInput = document.getElementById('modal-upload-arquivo-input');
     const uploadFileList = document.getElementById('modal-upload-file-list');
@@ -2486,12 +2205,8 @@ document.addEventListener('DOMContentLoaded', () => {
              }
         }
     };
-    // === FIM: Listeners Modais de Arquivo ===
 
-
-    // --- Carga Inicial ---
     loadWorkflow();
     
-    // Atualiza os timestamps (ex: "há 5 min") a cada 30 segundos
     setInterval(updateTimestamps, 30000); 
 });

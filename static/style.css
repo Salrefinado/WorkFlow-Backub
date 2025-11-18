@@ -382,13 +382,13 @@ header {
     /* [ANIMAÇÃO DE HOVER] */
     transition: all 0.2s ease-in-out;
     opacity: 1;
-    transform: scale(1);
+    /* transform: scale(1); REMOVIDO PARA EVITAR SCROLL HORIZONTAL */
     position: relative;
     z-index: 2;
 }
 .monday-row:hover {
     /* [ANIMAÇÃO DE HOVER] - Elevação */
-    transform: scale(1.005);
+    /* transform: scale(1.005); REMOVIDO PARA EVITAR SCROLL HORIZONTAL */
     background-color: #fff;
     box-shadow: var(--color-shadow-medium);
     z-index: 10; /* Fica acima das outras linhas */
@@ -437,18 +437,14 @@ header {
 .monday-thead th:nth-child(1),
 .monday-row td:nth-child(1) {
     min-width: 250px;
-    width: 30%;
+    width: 20%;
 }
 .monday-thead th:nth-child(2),
 .monday-row td:nth-child(2) {
-    min-width: 150px;
-    width: 150px;
     vertical-align: top;
 }
 .monday-thead th:nth-child(3),
 .monday-row td:nth-child(3) {
-    min-width: 220px;
-    width: 220px;
 }
 
 .col-data {
@@ -484,8 +480,8 @@ header {
 }
 
 /* --- Fonte do orçamento (Mantida) --- */
-.col-orcamento {
-    font-size: 1.5rem;
+.monday-row .col-orcamento {
+    font-size: 1.2rem; /* <-- Valor que você quer */
     font-weight: 500; 
     color: var(--color-text-primary); 
     line-height: 1.3;
@@ -518,6 +514,27 @@ header {
 .public-link-icon:hover {
     opacity: 1;
 }
+
+/* ==== INÍCIO DA ATUALIZAÇÃO PONTO 3 (CSS Link Público) ==== */
+.col-public-link {
+    width: 40px;
+    min-width: 40px;
+    text-align: left;
+    padding-left: 0px;
+    padding-right: 0px;
+}
+.col-public-link .public-link-icon {
+    font-size: 1.5rem; /* Tamanho maior */
+    margin-left: 0;
+    padding: 4px;
+    display: inline-block;
+}
+/* Remove o link da célula de orçamento (já feito no HTML, mas garantido) */
+.col-orcamento .public-link-icon {
+    display: none;
+}
+/* ==== FIM DA ATUALIZAÇÃO PONTO 3 ==== */
+
 
 .standby-info-icon {
     font-size: 0.8em;
@@ -676,17 +693,39 @@ header {
 .col-status { 
     position: relative;
     z-index: 5;
+    /* === NOVA REGRA DE LARGURA FIXA PARA STATUS === */
+    width: 180px;      /* Largura ideal para caber os botões */
+    min-width: 180px;  /* Impede que encolha */
+    max-width: 180px;  /* Impede que estique */
+    box-sizing: border-box;
+    padding-right: 0 !important; /* Aproxima o conteúdo da borda se necessário */
 }
-.col-status-final .status-final-text {
-    font-weight: 600;
-    color: var(--status-instalado-text);
-    padding: 6px 10px;
-    display: inline-block;
+
+/* Aplica a mesma regra para o Status Final (Instalados) */
+.col-status-final {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    box-sizing: border-box;
+}
+
+/* Classe auxiliar para o Cabeçalho (TH) que será injetada via JS */
+.th-status-fixed {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    box-sizing: border-box;
+}
+
+/* Garante que o conteúdo da célula de status (o dropdown) ocupe o espaço */
+.col-status .status-selector {
+    width: 100%; /* Ocupa os 180px disponíveis */
+}
 }
 
 .status-selector {
     position: relative;
-    width: 200px;
+    width: 150px;
 }
 
 .status-display {

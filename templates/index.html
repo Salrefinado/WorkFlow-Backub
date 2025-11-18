@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Work Management</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.3">
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 </head>
 <body>
@@ -45,9 +45,9 @@
             <div class="table-wrapper">
                 <table class="monday-table">
                     <thead class="monday-thead">
-                    </thead>
+                        </thead>
                     <tbody class="monday-tbody">
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </section>
@@ -58,11 +58,13 @@
             <td class="col-orcamento">
                 <div class="editable-cell-wrapper" data-action="open-detalhes">
                     <span class="orc-numero"></span> - <span class="orc-cliente"></span>
-                    <a class="public-link-icon" href="#" target="_blank" title="Link Público">🔗</a>
                     <span class="standby-info-icon" title="" style="display: none;">ℹ️</span>
                     <br>
                     <small class="last-updated-info"></small>
                 </div>
+            </td>
+            <td class="col-public-link">
+                <a class="public-link-icon" href="#" target="_blank" title="Link Público" data-action="open-public-link">🔗</a>
             </td>
             <td class="col-status">
                 <div class="status-selector" data-type="orcamento">
@@ -72,7 +74,7 @@
                         </div>
                 </div>
             </td>
-        </tr>
+            </tr>
     </template>
     
     <template id="row-template-producao">
@@ -80,13 +82,15 @@
             <td class="col-orcamento">
                  <div class="editable-cell-wrapper" data-action="open-detalhes">
                     <span class="orc-numero"></span> - <span class="orc-cliente"></span>
-                    <a class="public-link-icon" href="#" target="_blank" title="Link Público">🔗</a>
                     <span class="standby-info-icon" title="" style="display: none;">ℹ️</span>
                     <br>
                     <small class="last-updated-info"></small>
                 </div>
             </td>
-        </tr>
+            <td class="col-public-link">
+                <a class="public-link-icon" href="#" target="_blank" title="Link Público" data-action="open-public-link">🔗</a>
+            </td>
+            </tr>
     </template>
     
     <template id="row-template-final">
@@ -94,11 +98,13 @@
             <td class="col-orcamento">
                  <div class="editable-cell-wrapper" data-action="open-detalhes">
                     <span class="orc-numero"></span> - <span class="orc-cliente"></span>
-                    <a class="public-link-icon" href="#" target="_blank" title="Link Público">🔗</a>
                     <span class="standby-info-icon" title="" style="display: none;">ℹ️</span>
                     <br>
                     <small class="last-updated-info"></small>
                 </div>
+            </td>
+            <td class="col-public-link">
+                <a class="public-link-icon" href="#" target="_blank" title="Link Público" data-action="open-public-link">🔗</a>
             </td>
             <td class="col-arquivos">
                 </td>
@@ -150,7 +156,7 @@
             
             <div class="form-group">
                 <label for="modal-criar-endereco">Endereço (Para previsão do tempo)</label>
-                <input type="text" id="modal-criar-endereco" name="endereco" placeholder="Ex: Rua, Número, Bairro, Curitiba">
+                <input type="text" id="modal-criar-endereco" name="endereco" placeholder="Rua, Número, Bairro, Cidade e CEP">
             </div>
             
             <div class="form-group form-group-file-upload">
@@ -160,6 +166,7 @@
                 </label>
                 <input type="file" id="modal-criar-arquivo" name="arquivo" required>
             </div>
+
             <div class="form-row" style="align-items: flex-end;">
                 <div class="form-group-flex">
                     <label>Prazo Etapa 1 (Dias)</label>
@@ -242,7 +249,6 @@
         </div>
         
         <label for="modal-visita-responsavel">Responsável:</label>
-        
         <div class="modal-quick-days">
             <button type="button" class="btn btn-secondary" data-name="Renato">Renato</button>
             <button type="button" class="btn btn-secondary" data-name="Paulo">Paulo</button>
@@ -434,11 +440,11 @@
                 <div class="form-section">
                     <h5>Prazos e Registros de Data</h5>
                     <div class="input-group">
-                        <label for="detalhes-data-limite1">Data Limite (Etapa 1) - XX Dias</label>
+                        <label for="detalhes-data-limite1">Data Limite (Etapa 1)</label>
                         <input type="date" id="detalhes-data-limite1" name="data_limite_etapa1">
                     </div>
                     <div class="input-group">
-                        <label for="detalhes-data-limite2">Data Limite (Etapa 2) - XX Dias</label>
+                        <label for="detalhes-data-limite2">Data Limite (Etapa 2)</label>
                         <input type="date" id="detalhes-data-limite2" name="data_limite_etapa2">
                     </div>
                     <hr>
@@ -455,7 +461,7 @@
                         <input type="date" id="detalhes-data-instalacao" name="data_instalacao">
                     </div>
                     
-                    </div>
+                </div>
                 
                 <div class="form-section full-width">
                     <h5>Itens (Separados por vírgula)</h5>
@@ -496,6 +502,14 @@
         </form>
     </div>
     
+    <div id="modal-confirmar-movimentacao" class="modal hidden">
+        <h4>Confirmar Movimentação</h4>
+        <p id="modal-confirmar-movimentacao-texto">Tem certeza que deseja mover este item?</p>
+        <div class="modal-actions">
+            <button id="modal-confirmar-movimentacao-cancel" class="btn btn-secondary">Cancelar</button>
+            <button id="modal-confirmar-movimentacao-save" class="btn btn-primary">Sim, Mover</button>
+        </div>
+    </div>
     <div id="modal-producao" class="modal hidden"></div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
